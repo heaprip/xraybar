@@ -91,3 +91,9 @@ DECISIONS stays English only. Both languages change in the same commit.
 ## D11. Root session log is admin-readable only (2026-09-21)
 
 The Xray log lists every host visited. → `/var/run/xraybar/xray.log` is `root:admin 0640`.
+
+## D12. The root script is parsed whole before it runs (2026-09-21)
+
+bash reads a script file incrementally while executing it. Rebuilding the app during a
+session replaces the file under a running root shell, which would then continue at its old
+byte offset in the new file. → The script body is a single `{ … }` block ending in `exit`.

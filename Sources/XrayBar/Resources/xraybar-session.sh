@@ -10,6 +10,9 @@
 #
 # Usage: xraybar-session.sh <xray> <assets-dir> <config> <stop-file> <app-pid> <dns-server>...
 
+# The whole body is one { } block: bash parses it completely before running anything, so
+# replacing this file on disk (e.g. rebuilding the app) cannot change a running session.
+{
 set -u
 [[ $(id -u) == 0 ]] || { echo "must run as root" >&2; exit 1; }
 [[ $# -ge 6 ]] || { echo "usage: $0 <xray> <assets> <config> <stop-file> <app-pid> <dns>..." >&2; exit 2; }
@@ -110,3 +113,4 @@ while kill -0 "$XPID" 2>/dev/null && kill -0 "$APP_PID" 2>/dev/null && [[ ! -e $
     sleep 1
 done
 exit 0
+}
