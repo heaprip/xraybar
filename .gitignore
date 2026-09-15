@@ -1,0 +1,12 @@
+.build/
+.swiftpm/
+*.xcodeproj
+xcuserdata/
+DerivedData/
+.DS_Store
+/*.app
+
+# Local-only material, never part of the project
+/.ref/
+/poc/
+/xray-macos-menubar-architecture.md
