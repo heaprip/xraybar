@@ -1,20 +1,23 @@
 # Roadmap
 
+**English** · [Русский](ru/ROADMAP.md)
+
 ## Stage 0 — feasibility (done, 2026-09-21)
 - Xray native TUN on macOS validated with a standalone PoC on real traffic (see D1–D3).
 
-## Stage 1 — Connect from the menu (in progress)
+## Stage 1 — Connect from the menu (done, 2026-09-21)
 - Menu: status, Connect/Disconnect, profile picker, routing set picker, log, Quit.
 - Profiles: VLESS (Reality/TLS, raw). Import `vless://` from the clipboard.
 - One-time read-only import of profiles and routing sets from v2rayN.
-- Config generator ported from v2rayN, covered by tests.
+- Config generator matching v2rayN's TUN-mode behaviour, covered by tests.
 - Privileged session script: start xray, set/restore DNS, stop on disconnect/app exit.
+- Verified by the author on real traffic: import from v2rayN, connect, DNS through the tunnel.
 
 ## Stage 2 — configurations done properly
 - QR: show a profile as QR; import from an image or the clipboard (Vision).
 - Edit/duplicate/delete profiles; routing rules editor (SwiftUI window).
 - Own copy of Xray and `.dat` files, downloaded on request, checksum-verified.
-- Route exclusions (CIDR subtraction, from v2rayN).
+- Route exclusions (CIDR subtraction, as in v2rayN's TUN settings).
 - More transports if needed (xhttp, ws, grpc), other protocols only on demand.
 
 ## Stage 3 — solid

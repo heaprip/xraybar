@@ -1,5 +1,7 @@
 # Principles
 
+**English** · [Русский](ru/PRINCIPLES.md)
+
 XrayBar is a menu-bar control panel for [Xray-core](https://github.com/XTLS/Xray-core) on macOS.
 It exists because the available macOS clients are either buggy multi-core
 kitchen sinks or look and behave nothing like a Mac app.
@@ -43,6 +45,8 @@ kitchen sinks or look and behave nothing like a Mac app.
    real boundaries: UI, config generation, privileged execution.
 4. **Privilege is tiny and visible.** Everything that runs as root lives in one
    short shell script with a fixed set of actions.
-5. **Port, don't invent.** Behaviour that v2rayN already got right (TUN inbound,
-   rule expansion, DNS split) is ported from its source, with a reference.
+5. **Compatible, not copied.** Where v2rayN already got behaviour right (TUN inbound,
+   rule expansion, DNS split) or defined a format people use (routing sets), XrayBar
+   matches that behaviour and format, implemented from scratch. v2rayN is GPL-3.0 and
+   XrayBar is MIT: its code is read to understand behaviour, never translated (D9).
 6. **Decisions are written down** in `docs/DECISIONS.md` when they are made.

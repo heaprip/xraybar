@@ -68,3 +68,26 @@ Source is a few numbered files read in order; budget enforced by `scripts/audit.
 Until XrayBar ships its own verified copy, the xray binary and `.dat` files are taken
 from a configurable directory (default: v2rayN's `bin`). Known limitation: that directory
 is user-writable, see `docs/SECURITY.md`.
+
+## D9. MIT license; v2rayN is a behaviour reference, not a code source (2026-09-21)
+
+The author wants a permissive license (MIT/Apache). v2rayN is GPL-3.0, so translating its
+code would make XrayBar a derivative work. What XrayBar needs from v2rayN is behaviour
+(which Xray config shape works in TUN mode, how a rule with domains and IPs is split) and
+formats (routing-set JSON, share links), which can be implemented independently.
+
+→ XrayBar is MIT. v2rayN's source is read to understand behaviour; the Swift is written from
+Xray's documentation and observed configs, never translated line by line (CLAUDE.md).
+Stage-1 code was reviewed against this rule and its "ported from" wording removed.
+Not legal advice; if the project gains contributors, keep this rule in review.
+
+## D10. Docs: English primary, Russian mirror (2026-09-21)
+
+→ `README.md` + `docs/*.md` in English; `README.ru.md` + `docs/ru/*.md` in Russian for README,
+PRINCIPLES, SECURITY, AUDIT and ROADMAP, linked by a language line at the top of each file
+(the common GitHub convention; the wiki is not versioned with the code, so it is not used).
+DECISIONS stays English only. Both languages change in the same commit.
+
+## D11. Root session log is admin-readable only (2026-09-21)
+
+The Xray log lists every host visited. → `/var/run/xraybar/xray.log` is `root:admin 0640`.

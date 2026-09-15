@@ -18,7 +18,7 @@ XRAY=$1 ASSETS=$2 CONFIG=$3 STOP=$4 APP_PID=$5
 shift 5
 DNS=("$@")
 
-RUN=/var/run/xraybar           # root-owned; the app only reads the pid and log from here
+RUN=/var/run/xraybar           # root-owned; the app only reads the pid and the log from here
 LOG=$RUN/xray.log
 PIDFILE=$RUN/xray.pid
 DNS_SAVED=$RUN/dns.saved       # "service<TAB>previous servers" while DNS is overridden
@@ -29,7 +29,8 @@ install -d -o root -g wheel -m 755 "$RUN"
 if [[ -f $PIDFILE ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
     echo "a session is already running (pid $(cat "$PIDFILE"))" >&2; exit 1
 fi
-: >"$LOG"; chmod 644 "$LOG"
+# The log lists visited hosts: readable by admins (you), not by other local users.
+: >"$LOG"; chown root:admin "$LOG"; chmod 640 "$LOG"
 
 # --- Validate inputs: fixed shapes only, nothing is ever evaluated -------------------
 [[ -x $XRAY && -f $XRAY ]] || fail "xray binary not found: $XRAY"

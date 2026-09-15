@@ -1,5 +1,7 @@
 # XrayBar
 
+**English** · [Русский](README.ru.md)
+
 A small, native macOS menu-bar app that runs [Xray-core](https://github.com/XTLS/Xray-core)
 with its **native TUN**: all traffic, routed by geosite/geoip rules, through one process,
 with nothing else in between.
@@ -47,9 +49,10 @@ swift test
 swift build --build-tests && XRAYBAR_INTEGRATION=1 swift test --skip-build
 ```
 
-## Credits
+## License and credits
 
-Config generation and share-link parsing are ported from
-[v2rayN](https://github.com/2dust/v2rayN) (GPL-3.0). Routing data:
+MIT, see [LICENSE](LICENSE). Behaviour and formats are modelled on
+[v2rayN](https://github.com/2dust/v2rayN) (no v2rayN code is used). Xray-core is a separate
+program under MPL-2.0. Routing data:
 [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat),
 [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat).

@@ -1,5 +1,7 @@
 # Audit checklist
 
+**English** · [Русский](ru/AUDIT.md)
+
 Use this to review XrayBar yourself, or give it to an AI model as instructions
 (for example: `claude "Audit this repository following docs/AUDIT.md"`).
 

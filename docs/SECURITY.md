@@ -1,5 +1,7 @@
 # Security and trust
 
+**English** · [Русский](ru/SECURITY.md)
+
 XrayBar asks for your administrator password and sits in the path of all your traffic.
 You should not have to trust the author to use it. This document says what the app
 does, what it can and cannot protect against, and how to check it yourself.
@@ -19,7 +21,7 @@ Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modif
 | Root | One admin prompt per Connect runs `xraybar-session.sh`, nothing else | `Sources/XrayBar/Resources/xraybar-session.sh` |
 | As root | copies the config to `/var/run/xraybar`, starts xray, sets DNS, waits, stops xray, restores DNS | same script |
 | Network (app) | none. Future: user-started downloads of Xray/`.dat` from GitHub releases only | `grep -n URLSession Sources` |
-| Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file); `/var/run/xraybar/` (root: config copy, pid, log, saved DNS) | `2-Store.swift`, script |
+| Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file); `/var/run/xraybar/` (root: config copy, pid, saved DNS; log readable by admin users only) | `2-Store.swift`, script |
 | Files read | the above; optionally v2rayN's database for one-time import (read-only) | `3-Import.swift` |
 | Processes | the admin prompt (`NSAppleScript`), `xray run -test` for validation | `5-Session.swift` |
 | Secrets | profiles are stored as plain JSON (mode 600) in stage 1; Keychain is planned | `2-Store.swift` |

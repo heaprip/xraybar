@@ -19,7 +19,7 @@ enum Import {
     // MARK: Share links
 
     /// `vless://uuid@host:port?type=tcp&security=reality&sni=…&pbk=…&sid=…&fp=…&flow=…#name`
-    /// Port of v2rayN `VLESSFmt.Resolve` / `BaseFmt.ResolveUriQuery`, VLESS only.
+    /// The de-facto VLESS share-link format (XTLS/Xray-core discussion #716); raw transport only.
     static func profile(fromLink link: String) throws -> Profile {
         let link = link.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let url = URLComponents(string: link), url.scheme == "vless",

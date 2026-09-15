@@ -1,7 +1,8 @@
 // 4. Config — turns a profile and a routing set into Xray's config.json.
 //
-// Ported from v2rayN ServiceLib/Services/CoreConfig/V2ray/* (Inbound, Routing, Dns services),
-// minus everything XrayBar does not do. Validated on real traffic by the stage-0 PoC.
+// Written from Xray's config documentation and from observing the configs v2rayN generates
+// in TUN mode (behaviour reference only; no v2rayN code is used, see docs/DECISIONS.md D9).
+// Validated on real traffic by the stage-0 PoC.
 
 import Foundation
 
@@ -24,7 +25,7 @@ enum XrayConfig {
         ]
     }
 
-    // MARK: TUN inbound (v2rayN V2rayInboundService, SampleTunInbound)
+    // MARK: TUN inbound
 
     static func tunInbound(_ settings: Settings) -> JSON {
         [
@@ -44,7 +45,7 @@ enum XrayConfig {
         ]
     }
 
-    // MARK: Proxy outbound (v2rayN V2rayOutboundService, VLESS only)
+    // MARK: Proxy outbound (VLESS only)
 
     static func proxyOutbound(_ p: Profile) -> JSON {
         var user: JSON = ["id": p.uuid, "encryption": p.encryption]
@@ -72,11 +73,11 @@ enum XrayConfig {
         ]
     }
 
-    // MARK: Routing (v2rayN V2rayRoutingService.GenRouting / GenRoutingUserRule)
+    // MARK: Routing
 
     static func rules(_ routing: RoutingSet) -> [JSON] {
         var out: [JSON] = [
-            // TUN-only rules (SampleTunRules): no LAN discovery chatter, no multicast.
+            // In TUN mode: no LAN discovery chatter, no multicast.
             ["network": "udp", "port": "135,137-139,5353", "outboundTag": "block"],
             ["ip": ["224.0.0.0/3", "ff00::/8"], "outboundTag": "block"],
             // DNS reaching the tunnel is answered by Xray's DNS module.
@@ -112,7 +113,7 @@ enum XrayConfig {
         (r.domain ?? []).filter { !$0.hasPrefix("#") }.map { $0.replacingOccurrences(of: "<COMMA>", with: ",") }
     }
 
-    // MARK: DNS (simplified v2rayN V2rayDnsService.FillDnsServers)
+    // MARK: DNS
 
     /// Domains of enabled direct rules are resolved by the direct resolver (outside the
     /// tunnel, so they get local answers); everything else by the remote resolvers.

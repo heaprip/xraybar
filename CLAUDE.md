@@ -13,10 +13,15 @@ Read `docs/PRINCIPLES.md` first. The short version:
   and then only from one documented place.
 - **Native look.** `NSMenu`/`NSStatusItem`, SF Symbols, `NSAlert`, SwiftUI only for editor
   windows. No custom styling.
-- **Port from v2rayN, don't invent.** When porting, cite the v2rayN file/function in a
-  comment. A shallow clone for reference lives in `.ref/v2rayN` (not tracked).
+- **Match v2rayN's behaviour, never copy its code.** v2rayN is GPL-3.0, XrayBar is MIT (D9).
+  Read `.ref/v2rayN` (shallow clone, not tracked) to understand *what* it does, then write
+  the Swift from Xray's documentation and observed behaviour. No line-by-line translation,
+  no pasted snippets. Formats (routing-set JSON, share links) may be matched exactly.
 - **Record decisions** in `docs/DECISIONS.md` (context → decision → consequences), keep
   `docs/SECURITY.md` in sync with what the code does, and update `docs/ROADMAP.md`.
+- **Docs are bilingual.** English is primary; `README.ru.md` and `docs/ru/` mirror README,
+  PRINCIPLES, SECURITY, AUDIT and ROADMAP. Update the Russian file in the same commit.
+  `DECISIONS.md` is English only.
 
 Build: `swift build`. Test: `swift test`. Integration (local v2rayN + xray, read-only):
 `swift build --build-tests && XRAYBAR_INTEGRATION=1 swift test --skip-build`.
