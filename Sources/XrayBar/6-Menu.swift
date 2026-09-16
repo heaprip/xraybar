@@ -15,6 +15,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         item.menu?.delegate = self
         session.onChange = { [weak self] in self?.stateChanged() }
         updateIcon()
+        if Session.needsRestore { offerRestore() }
     }
 
     // MARK: Building the menu (rebuilt every time it opens)
@@ -23,6 +24,9 @@ final class MenuBar: NSObject, NSMenuDelegate {
         menu.removeAllItems()
 
         menu.addItem(disabled(statusText))
+        if Session.needsRestore {
+            menu.addItem(action("Restore Network Settings…", #selector(restore)))
+        }
         switch session.state {
         case .connected, .connecting:
             menu.addItem(action("Disconnect", #selector(disconnect)))
@@ -105,6 +109,19 @@ final class MenuBar: NSObject, NSMenuDelegate {
     // MARK: Actions
 
     @objc private func connect() { session.connect(library) }
+    @objc private func restore() { session.restore() }
+
+    /// A previous session ended without cleaning up (power loss, crash of the root script).
+    private func offerRestore() {
+        NSApp.activate()
+        let a = NSAlert()
+        a.messageText = "XrayBar did not shut down cleanly"
+        a.informativeText = "Network settings from the last connection are still in place "
+            + "(DNS, or Xray still running). Restore them now? You will be asked for your password."
+        a.addButton(withTitle: "Restore")
+        a.addButton(withTitle: "Later")
+        if a.runModal() == .alertFirstButtonReturn { session.restore() }
+    }
     @objc private func disconnect() { session.disconnect() }
 
     @objc private func selectProfile(_ sender: NSMenuItem) {

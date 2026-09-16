@@ -107,3 +107,18 @@ The root script accepts only empty or `"none"` log paths.
 → The root script sets `PATH=/usr/bin:/bin:/usr/sbin:/sbin` so it only ever runs system tools.
 → Tests run through `scripts/test.sh`: CLT's SwiftPM builds the test target's emit-module job
 without the Swift Testing macro plugin; the script passes the plugin path explicitly.
+
+## D14. Clean up after sessions that died (2026-09-21)
+
+`/var/run` is emptied at boot, so a DNS backup kept there is lost on power loss while
+connected, leaving the Wi-Fi DNS overridden with nothing to restore it from. A root script
+killed while xray keeps running blocked the next Connect ("already running") and made
+Disconnect wait forever.
+
+→ The saved DNS lives in `/var/db/xraybar/dns.saved`. The session records its own PID
+(`session.pid`); xray alive without its session is "stale". Every Connect cleans up stale
+state first, and `xraybar-session.sh --restore` does only that. The app detects leftovers at
+launch and offers **Restore** (one password prompt); the menu shows **Restore Network
+Settings…** while leftovers exist. A stale xray is stopped only if its PID, recorded by the
+session, still runs `xray run -c /var/run/xraybar/config.json` (PIDs can be reused).
+→ The root-owned config copy (it holds credentials) is deleted when a session ends.

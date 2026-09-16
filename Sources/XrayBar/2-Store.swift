@@ -14,7 +14,10 @@ enum Store {
     /// Written by the root session; world-readable.
     static let runDir = URL(fileURLWithPath: "/var/run/xraybar")
     static let pidFile = runDir.appendingPathComponent("xray.pid")
+    static let sessionPidFile = runDir.appendingPathComponent("session.pid")
     static let logFile = runDir.appendingPathComponent("xray.log")
+    /// Present while DNS is overridden; kept in /var/db so it survives a power loss.
+    static let dnsSavedFile = URL(fileURLWithPath: "/var/db/xraybar/dns.saved")
 
     static func load() -> Library {
         guard let data = try? Data(contentsOf: libraryFile) else { return Library() }

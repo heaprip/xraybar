@@ -38,7 +38,7 @@ For each item, answer yes/no with evidence:
       session script.
 - [ ] Arguments passed to the script are quoted/validated; no user-controlled string is
       interpolated into a shell command unescaped (profile names, paths, server addresses).
-- [ ] As root, the script only: creates `/var/run/xraybar`, copies the config, starts
+- [ ] As root, the script only: creates `/var/run/xraybar` and `/var/db/xraybar`, copies the config, starts
       xray, changes DNS of the active network service, signals the PID it started,
       restores DNS. It does not install files elsewhere, persist itself, or modify
       sudoers, launchd, `/etc` or other users' data.

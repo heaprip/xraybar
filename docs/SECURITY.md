@@ -19,9 +19,9 @@ Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modif
 | Area | Behaviour | Where |
 |---|---|---|
 | Root | One admin prompt per Connect runs `xraybar-session.sh`, nothing else | `Sources/XrayBar/Resources/xraybar-session.sh` |
-| As root | copies the config to `/var/run/xraybar`, starts xray, sets DNS, waits, stops xray, restores DNS | same script |
+| As root | copies the config to `/var/run/xraybar`, starts xray, sets DNS, waits, stops xray, restores DNS; `--restore` cleans up after a session that died | same script |
 | Network (app) | none. Future: user-started downloads of Xray/`.dat` from GitHub releases only | `grep -n URLSession Sources` |
-| Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file); `/var/run/xraybar/` (root: config copy, pid, saved DNS; log readable by admin users only, errors only unless Detailed Log is on) | `2-Store.swift`, script |
+| Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file); `/var/run/xraybar/` (root: config copy while connected, pids; `/var/db/xraybar/dns.saved` survives reboots; log readable by admin users only, errors only unless Detailed Log is on) | `2-Store.swift`, script |
 | Files read | the above; optionally v2rayN's database for one-time import (read-only) | `3-Import.swift` |
 | Processes | the admin prompt (`NSAppleScript`), `xray run -test` for validation | `5-Session.swift` |
 | Secrets | profiles are stored as plain JSON (mode 600) in stage 1; Keychain is planned | `2-Store.swift` |
@@ -33,7 +33,8 @@ Nothing else: no telemetry, no crash reporting, no update checks, no analytics.
 Protects against:
 - The app doing something other than what its source says (build it yourself).
 - Hidden network activity by the app (single place allowed to do network I/O, grep-able).
-- Leftover state: orphaned root processes, leaked routes, DNS left pointing at the tunnel.
+- Leftover state: orphaned root processes, leaked routes, DNS left pointing at the tunnel —
+  including after a power loss or a killed root script (offered as "Restore" on next launch).
 - Root running a config that writes arbitrary files: the script runs its own root-owned
   copy of the config and refuses configs that set log file paths.
 

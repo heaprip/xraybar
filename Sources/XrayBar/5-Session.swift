@@ -35,7 +35,9 @@ final class Session {
             try Store.write(XrayConfig.data(config), to: Store.configFile)
             try validate(XrayConfig.validationCopy(config), settings: library.settings)
             try? FileManager.default.removeItem(at: Store.stopFile)
-            try runPrivileged(library.settings)
+            let s = library.settings
+            try runPrivileged([s.xrayPath, s.assetsDir, Store.configFile.path, Store.stopFile.path,
+                               String(ProcessInfo.processInfo.processIdentifier)] + s.systemDNS)
             connectStarted = Date()
             set(.connecting)
         } catch is CancellationError {
@@ -68,14 +70,13 @@ final class Session {
     }
 
     /// The only path to root. Every argument is single-quoted for the shell; the whole
-    /// command is then escaped into an AppleScript string. The script runs detached.
-    private func runPrivileged(_ settings: Settings) throws {
+    /// command is then escaped into an AppleScript string. A session runs detached.
+    private func runPrivileged(_ arguments: [String], detached: Bool = true) throws {
         guard let script = Bundle.module.url(forResource: "xraybar-session", withExtension: "sh") else {
             throw NSError(domain: "XrayBar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Session script missing"])
         }
-        let args = [script.path, settings.xrayPath, settings.assetsDir, Store.configFile.path,
-                    Store.stopFile.path, String(ProcessInfo.processInfo.processIdentifier)] + settings.systemDNS
-        let command = "/bin/bash " + args.map(Self.shellQuoted).joined(separator: " ") + " >/dev/null 2>&1 &"
+        let command = "/bin/bash " + ([script.path] + arguments).map(Self.shellQuoted).joined(separator: " ")
+            + (detached ? " >/dev/null 2>&1 &" : "")
         let source = "do shell script \"\(Self.appleScriptEscaped(command))\" with administrator privileges"
 
         var error: NSDictionary?
@@ -94,6 +95,26 @@ final class Session {
         s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
     }
 
+    // MARK: Leftovers of a session that died (power loss, killed script)
+
+    /// DNS still overridden with nothing running, or xray running without its session.
+    static var needsRestore: Bool {
+        let xray = runningPID() != nil
+        return (!xray && FileManager.default.fileExists(atPath: Store.dnsSavedFile.path))
+            || (xray && pid(in: Store.sessionPidFile) == nil)
+    }
+
+    /// Stops a leftover xray and restores DNS (one administrator prompt).
+    func restore() {
+        do {
+            try runPrivileged(["--restore"], detached: false)
+            set(.disconnected)
+        } catch is CancellationError {
+        } catch {
+            fail(error.localizedDescription)
+        }
+    }
+
     // MARK: Disconnect
 
     func disconnect() {
@@ -106,8 +127,10 @@ final class Session {
 
     /// PID written by the root session, if that process is alive. `kill(pid, 0)` on a root
     /// process from a user process fails with EPERM, which still means "exists".
-    static func runningPID() -> pid_t? {
-        guard let text = try? String(contentsOf: Store.pidFile, encoding: .utf8),
+    static func runningPID() -> pid_t? { pid(in: Store.pidFile) }
+
+    private static func pid(in file: URL) -> pid_t? {
+        guard let text = try? String(contentsOf: file, encoding: .utf8),
               let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 0
         else { return nil }
         return kill(pid, 0) == 0 || errno == EPERM ? pid : nil
@@ -130,6 +153,8 @@ final class Session {
         case .disconnecting where !running:
             try? FileManager.default.removeItem(at: Store.stopFile)
             set(.disconnected)
+        case .disconnecting where Self.needsRestore:
+            fail("The session stopped responding. Use Restore Network Settings in the menu.")
         case .disconnected where running, .failed where running:
             set(.connected)   // e.g. connected before this app instance started
         default:
