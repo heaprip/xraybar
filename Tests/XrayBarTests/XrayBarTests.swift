@@ -58,7 +58,10 @@ import Testing
         #expect(tun["autoOutboundsInterface"] as? String == "auto")
 
         let log = try #require(c["log"] as? [String: Any])
-        #expect(log["access"] == nil && log["error"] == nil)   // root session rejects file logs
+        #expect(log["loglevel"] as? String == "error" && log["access"] as? String == "none")
+        #expect(log["error"] == nil)                             // root session rejects file logs
+        var verbose = Settings(); verbose.detailedLog = true
+        #expect(XrayConfig.log(verbose)["access"] == nil)
 
         let rules = try #require((c["routing"] as? [String: Any])?["rules"] as? [[String: Any]])
         #expect(rules.allSatisfy { $0["process"] == nil })       // D2
@@ -82,8 +85,7 @@ import Testing
     }
 }
 
-/// Opt-in: `swift build --build-tests && XRAYBAR_INTEGRATION=1 swift test --skip-build`
-/// (a changed environment makes SwiftPM rebuild, which loses the Testing macro plugin under CLT).
+/// Opt-in: `scripts/test.sh --integration`.
 /// Reads the local v2rayN database (read-only), generates a config for every imported server/routing pair and runs `xray run -test` on it.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["XRAYBAR_INTEGRATION"] != nil))
 struct IntegrationTests {
@@ -107,5 +109,14 @@ struct IntegrationTests {
             try? FileManager.default.removeItem(at: file)
             #expect(xray.terminationStatus == 0, "routing set \(routing.name)")
         }
+    }
+}
+
+@Suite struct StoreTests {
+    /// A library.json written before `detailedLog` existed must still load (CLAUDE.md rule).
+    @Test func settingsWithoutNewerFieldsDecode() throws {
+        let json = #"{"assetsDir":"/x","directDNS":[],"remoteDNS":[],"systemDNS":[],"tunMTU":1500}"#
+        let s = try JSONDecoder().decode(Settings.self, from: Data(json.utf8))
+        #expect(s.detailedLog == nil && s.tunMTU == 1500)
     }
 }

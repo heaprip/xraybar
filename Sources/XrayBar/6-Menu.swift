@@ -56,6 +56,9 @@ final class MenuBar: NSObject, NSMenuDelegate {
         menu.addItem(action("Import from v2rayN…", #selector(importV2rayN)))
         menu.addItem(.separator())
         menu.addItem(action("Show Xray Log", #selector(showLog)))
+        let detailed = action("Detailed Log", #selector(toggleDetailedLog))
+        detailed.state = library.settings.detailedLog == true ? .on : .off
+        menu.addItem(detailed)
         menu.addItem(action("Show Data Folder", #selector(showDataFolder)))
         menu.addItem(.separator())
         menu.addItem(action("Quit XrayBar", #selector(quit), key: "q"))
@@ -111,6 +114,11 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
     @objc private func selectRouting(_ sender: NSMenuItem) {
         library.selectedRouting = sender.representedObject as? UUID
+        saveSelection()
+    }
+
+    @objc private func toggleDetailedLog() {
+        library.settings.detailedLog = !(library.settings.detailedLog ?? false)
         saveSelection()
     }
 

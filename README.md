@@ -44,9 +44,8 @@ meant to be read in order, plus a ~100-line root script, with zero dependencies.
 ## Tests
 
 ```sh
-swift test
-# against your local v2rayN data and xray binary (read-only):
-swift build --build-tests && XRAYBAR_INTEGRATION=1 swift test --skip-build
+scripts/test.sh                 # unit tests
+scripts/test.sh --integration   # also runs configs from your local v2rayN through xray (read-only)
 ```
 
 ## License and credits

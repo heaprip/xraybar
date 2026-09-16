@@ -97,3 +97,13 @@ The Xray log lists every host visited. → `/var/run/xraybar/xray.log` is `root:
 bash reads a script file incrementally while executing it. Rebuilding the app during a
 session replaces the file under a running root shell, which would then continue at its old
 byte offset in the new file. → The script body is a single `{ … }` block ending in `exit`.
+
+## D13. Errors-only log by default; root PATH pinned (2026-09-21)
+
+With the access log on, a few minutes of browsing produced ~300 lines, one per connection.
+→ Default `loglevel: error`, `access: none`. A **Detailed Log** menu toggle restores
+warnings and the access log for diagnosing routing; it applies on the next Connect.
+The root script accepts only empty or `"none"` log paths.
+→ The root script sets `PATH=/usr/bin:/bin:/usr/sbin:/sbin` so it only ever runs system tools.
+→ Tests run through `scripts/test.sh`: CLT's SwiftPM builds the test target's emit-module job
+without the Swift Testing macro plugin; the script passes the plugin path explicitly.

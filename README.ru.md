@@ -45,9 +45,8 @@ swift build -c release
 ## Тесты
 
 ```sh
-swift test
-# на ваших локальных данных v2rayN и бинаре xray (только чтение):
-swift build --build-tests && XRAYBAR_INTEGRATION=1 swift test --skip-build
+scripts/test.sh                 # модульные тесты
+scripts/test.sh --integration   # плюс прогон конфигов из вашего v2rayN через xray (только чтение)
 ```
 
 ## Лицензия и благодарности

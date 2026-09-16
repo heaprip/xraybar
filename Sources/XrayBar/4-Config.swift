@@ -11,8 +11,7 @@ enum XrayConfig {
 
     static func make(profile: Profile, routing: RoutingSet, settings: Settings) -> JSON {
         [
-            // No file paths: the root session captures stdout/stderr itself (see the script).
-            "log": ["loglevel": "warning"],
+            "log": log(settings),
             "inbounds": [tunInbound(settings)],
             "outbounds": [
                 proxyOutbound(profile),
@@ -23,6 +22,16 @@ enum XrayConfig {
             "dns": dns(routing, settings),
             "routing": ["domainStrategy": routing.domainStrategy, "rules": rules(routing)],
         ]
+    }
+
+    // MARK: Log
+
+    /// Never file paths: the root session captures stdout/stderr itself (see the script).
+    /// Default is errors only and no per-connection access log, so the log stays small.
+    static func log(_ settings: Settings) -> JSON {
+        settings.detailedLog == true
+            ? ["loglevel": "warning"]                     // access log goes to stdout
+            : ["loglevel": "error", "access": "none"]
     }
 
     // MARK: TUN inbound

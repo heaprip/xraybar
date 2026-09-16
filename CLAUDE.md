@@ -17,14 +17,18 @@ Read `docs/PRINCIPLES.md` first. The short version:
   Read `.ref/v2rayN` (shallow clone, not tracked) to understand *what* it does, then write
   the Swift from Xray's documentation and observed behaviour. No line-by-line translation,
   no pasted snippets. Formats (routing-set JSON, share links) may be matched exactly.
+- **Persisted fields added later must be optional** (or decode with a default), so an
+  existing `library.json` keeps loading; `Store.load` sets unreadable files aside.
 - **Record decisions** in `docs/DECISIONS.md` (context → decision → consequences), keep
   `docs/SECURITY.md` in sync with what the code does, and update `docs/ROADMAP.md`.
 - **Docs are bilingual.** English is primary; `README.ru.md` and `docs/ru/` mirror README,
   PRINCIPLES, SECURITY, AUDIT and ROADMAP. Update the Russian file in the same commit.
   `DECISIONS.md` is English only.
 
-Build: `swift build`. Test: `swift test`. Integration (local v2rayN + xray, read-only):
-`swift build --build-tests && XRAYBAR_INTEGRATION=1 swift test --skip-build`.
+Build: `swift build`. Test: `scripts/test.sh` (plain `swift test` hits a CLT plugin bug, see
+the script). Integration (local v2rayN + xray, read-only): `scripts/test.sh --integration`.
+In this environment `grep` may be a shell function wrapping ugrep: to check what the root
+script will do, run snippets under `/bin/bash --noprofile --norc`.
 
 Never touch the user's v2rayN installation beyond read-only access to its database and
 binaries. Never stop processes you did not start.

@@ -14,6 +14,7 @@
 # replacing this file on disk (e.g. rebuilding the app) cannot change a running session.
 {
 set -u
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin   # system tools only, whatever the caller had
 [[ $(id -u) == 0 ]] || { echo "must run as root" >&2; exit 1; }
 [[ $# -ge 6 ]] || { echo "usage: $0 <xray> <assets> <config> <stop-file> <app-pid> <dns>..." >&2; exit 2; }
 
@@ -44,8 +45,9 @@ for d in "${DNS[@]}"; do [[ $d =~ ^[0-9A-Fa-f:.]+$ ]] || fail "bad DNS server: $
 
 # Work on a root-owned copy from here on, so the file cannot change after it is checked.
 install -o root -g wheel -m 600 "$CONFIG" "$RUN/config.json"
-# Root must not be steered into writing files: reject configs that set log file paths.
-grep -Eq '"(access|error|dnsLog)"[[:space:]]*:[[:space:]]*"[^"]' "$RUN/config.json" && fail "config sets log files"
+# Root must not be steered into writing files: log paths may only be empty or "none".
+grep -Eo '"(access|error)"[[:space:]]*:[[:space:]]*"[^"]+"' "$RUN/config.json" | grep -qv '"none"$' \
+    && fail "config sets log files"
 
 
 # --- DNS helpers ---------------------------------------------------------------------
