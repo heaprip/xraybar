@@ -8,6 +8,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let session = Session()
     private var library = Store.load()
+    private var updating = false
 
     override init() {
         super.init()
@@ -56,6 +57,21 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        menu.addItem(.sectionHeader(title: "Xray"))
+        menu.addItem(disabled(coreStatus))
+        menu.addItem(updating ? disabled("Updating…") : action("Update Xray and Routing Data", #selector(updateAssets)))
+        let sources = NSMenu()
+        for source in Assets.DataSource.allCases {
+            let i = action(source.title, #selector(selectDataSource(_:)))
+            i.representedObject = source.rawValue
+            i.state = source == dataSource ? .on : .off
+            sources.addItem(i)
+        }
+        let sourceItem = NSMenuItem(title: "Routing Data Source", action: nil, keyEquivalent: "")
+        sourceItem.submenu = sources
+        menu.addItem(sourceItem)
+
+        menu.addItem(.separator())
         menu.addItem(action("Import Link from Clipboard", #selector(importClipboard)))
         menu.addItem(action("Import from v2rayN…", #selector(importV2rayN)))
         menu.addItem(.separator())
@@ -76,6 +92,16 @@ final class MenuBar: NSObject, NSMenuDelegate {
         case .disconnecting: return "Disconnecting…"
         case .disconnected, .failed: return "Not Connected"
         }
+    }
+
+    private var dataSource: Assets.DataSource { library.settings.dataSource ?? .runetfreedom }
+
+    /// "Xray 26.9.9 · runetfreedom (Russia)", or where the xray in use comes from.
+    private var coreStatus: String {
+        guard library.settings.assetsDir == Assets.dir.path, let version = library.settings.coreVersion else {
+            return "Using Xray from v2rayN"
+        }
+        return version.split(separator: " ").prefix(2).joined(separator: " ") + " · " + dataSource.title
     }
 
     private func action(_ title: String, _ selector: Selector, key: String = "") -> NSMenuItem {
@@ -122,6 +148,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         a.addButton(withTitle: "Later")
         if a.runModal() == .alertFirstButtonReturn { session.restore() }
     }
+
     @objc private func disconnect() { session.disconnect() }
 
     @objc private func selectProfile(_ sender: NSMenuItem) {
@@ -132,6 +159,30 @@ final class MenuBar: NSObject, NSMenuDelegate {
     @objc private func selectRouting(_ sender: NSMenuItem) {
         library.selectedRouting = sender.representedObject as? UUID
         saveSelection()
+    }
+
+    /// Downloads and verifies Xray and the routing data (7-Assets), then switches to them.
+    @objc private func updateAssets() {
+        updating = true
+        let source = dataSource
+        Task {
+            do {
+                let version = try await Assets.update(dataSource: source)
+                library.settings.assetsDir = Assets.dir.path
+                library.settings.coreVersion = version
+                save()
+                alert("Xray updated", "\(coreStatus). Checksums verified. Takes effect on the next Connect.")
+            } catch {
+                alert("Update failed", error.localizedDescription)
+            }
+            updating = false
+        }
+    }
+
+    @objc private func selectDataSource(_ sender: NSMenuItem) {
+        library.settings.dataSource = (sender.representedObject as? String).flatMap(Assets.DataSource.init)
+        save()
+        alert("Routing data source changed", "Choose Update Xray and Routing Data to download it.")
     }
 
     @objc private func toggleDetailedLog() {

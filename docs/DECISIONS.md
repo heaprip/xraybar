@@ -122,3 +122,18 @@ launch and offers **Restore** (one password prompt); the menu shows **Restore Ne
 Settings…** while leftovers exist. A stale xray is stopped only if its PID, recorded by the
 session, still runs `xray run -c /var/run/xraybar/config.json` (PIDs can be reused).
 → The root-owned config copy (it holds credentials) is deleted when a session ends.
+
+## D15. XrayBar's own Xray and routing data, verified, on request (2026-09-21)
+
+Depending on v2rayN's `bin` ties XrayBar to another app's update cycle (v2rayN 7.24.9 broke
+TUN) and to files nobody verified.
+
+→ *Update Xray and Routing Data* downloads the latest Xray release zip for this CPU and
+`geoip.dat`/`geosite.dat` from the chosen source (runetfreedom by default, or Loyalsoldier),
+into `~/Library/Application Support/XrayBar/core` (v2rayN's layout). Each file is checked
+against the SHA-256 published in the same release (`.dgst` `SHA2-256=` line for Xray,
+`*.sha256sum` for the data) in a staging directory; nothing replaces the current copy unless
+every file passes. Ephemeral URLSession. This file (`7-Assets.swift`) is the only network code.
+→ No automatic updates or update checks (PRINCIPLES: quiet). Same-origin checksums prove
+integrity in transit, not upstream honesty (SECURITY).
+→ Until the first download, v2rayN's copy is used, as before (D8).

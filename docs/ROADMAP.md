@@ -16,7 +16,7 @@
 ## Stage 2 — configurations done properly
 - QR: show a profile as QR; import from an image or the clipboard (Vision).
 - Edit/duplicate/delete profiles; routing rules editor (SwiftUI window).
-- Own copy of Xray and `.dat` files, downloaded on request, checksum-verified.
+- ✅ Own copy of Xray and `.dat` files, downloaded on request, checksum-verified (runetfreedom or Loyalsoldier data).
 - Route exclusions (CIDR subtraction, as in v2rayN's TUN settings).
 - More transports if needed (xhttp, ws, grpc), other protocols only on demand.
 

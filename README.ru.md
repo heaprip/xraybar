@@ -24,8 +24,9 @@ swift build -c release
 .build/release/XrayBar
 ```
 
-На этапе 1 бинарь `xray` и файлы `geoip.dat`/`geosite.dat` берутся из существующей установки
-(по умолчанию из `~/Library/Application Support/v2rayN/bin` от v2rayN). Серверы
+Пункт **Update Xray and Routing Data** скачивает официальный релиз Xray и файлы
+`geoip.dat`/`geosite.dat` с проверкой контрольных сумм. До этого используется установка v2rayN
+(`~/Library/Application Support/v2rayN/bin`). Серверы
 импортируются через **Import Link from Clipboard** (`vless://…`) или
 **Import from v2rayN…** (только чтение).
 

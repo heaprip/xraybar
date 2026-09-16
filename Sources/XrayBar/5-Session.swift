@@ -61,8 +61,8 @@ final class Session {
         xray.standardOutput = output
         xray.standardError = output
         try xray.run()
-        xray.waitUntilExit()
         let text = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        xray.waitUntilExit()
         guard xray.terminationStatus == 0 else {
             throw NSError(domain: "XrayBar", code: 1, userInfo: [NSLocalizedDescriptionKey:
                 "Xray rejected the configuration:\n" + text.split(separator: "\n").suffix(3).joined(separator: "\n")])

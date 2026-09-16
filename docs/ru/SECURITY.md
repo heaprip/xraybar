@@ -21,10 +21,10 @@ upstream-проекту XTLS; XrayBar его не изменяет.
 |---|---|---|
 | Root | Один запрос пароля на каждый Connect запускает `xraybar-session.sh`, и больше ничего | `Sources/XrayBar/Resources/xraybar-session.sh` |
 | От root | копирует конфиг в `/var/run/xraybar`, запускает xray, меняет DNS, ждёт, останавливает xray, восстанавливает DNS; `--restore` убирает следы погибшей сессии | тот же скрипт |
-| Сеть (приложение) | нет. В будущем: только запущенные пользователем загрузки Xray и `.dat` с GitHub Releases | `grep -n URLSession Sources` |
-| Запись файлов | `~/Library/Application Support/XrayBar/` (библиотека, сгенерированный конфиг, стоп-файл); `/var/run/xraybar/` (root: копия конфига на время подключения, pid; `/var/db/xraybar/dns.saved` переживает перезагрузку; лог читают только администраторы; в нём только ошибки, пока не включён Detailed Log) | `2-Store.swift`, скрипт |
+| Сеть (приложение) | только по команде *Update Xray and Routing Data*: релиз Xray и выбранный источник `.dat` на GitHub; каждый файл до использования сверяется с SHA-256 из upstream; эфемерная сессия без cookies и кэша | `7-Assets.swift` |
+| Запись файлов | `~/Library/Application Support/XrayBar/` (библиотека, сгенерированный конфиг, стоп-файл, `core/` со скачанными Xray и `.dat`); `/var/run/xraybar/` (root: копия конфига на время подключения, pid; `/var/db/xraybar/dns.saved` переживает перезагрузку; лог читают только администраторы; в нём только ошибки, пока не включён Detailed Log) | `2-Store.swift`, скрипт |
 | Чтение файлов | перечисленное выше; по желанию база v2rayN для разового импорта (только чтение) | `3-Import.swift` |
-| Процессы | запрос пароля (`NSAppleScript`), `xray run -test` для проверки конфига | `5-Session.swift` |
+| Процессы | запрос пароля (`NSAppleScript`), `xray run -test` для проверки конфига; `ditto` для распаковки и `xray version` после загрузки | `5-Session.swift`, `7-Assets.swift` |
 | Секреты | на этапе 1 профили хранятся в обычном JSON (права 600); Keychain запланирован | `2-Store.swift` |
 
 Больше ничего: ни телеметрии, ни отчётов о сбоях, ни проверки обновлений, ни аналитики.

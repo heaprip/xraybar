@@ -30,7 +30,7 @@ find_code 'administrator privileges|sudo|AuthorizationExecute|SMJobBless|SMAppSe
 section "Process execution"
 find_code 'Process\(\)|posix_spawn|NSTask|system\(|popen|executableURL'
 
-section "Networking (the app itself should have none in stage 1)"
+section "Networking (expected: only 7-Assets.swift, run when the user asks)"
 find_code 'URLSession|NSURLConnection|import Network|CFSocket|socket\(|/dev/tcp|curl |wget '
 
 section "Hard-coded URLs and hosts"

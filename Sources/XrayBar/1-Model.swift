@@ -63,6 +63,10 @@ struct Settings: Codable, Equatable, Sendable {
     /// Off: errors only. On: warnings plus one line per connection, for diagnosing routing.
     /// Fields added after stage 1 are optional, so older library.json files keep loading.
     var detailedLog: Bool?
+    /// Where geoip.dat/geosite.dat come from when XrayBar downloads its own copy (7-Assets).
+    var dataSource: Assets.DataSource?
+    /// Version line of the xray XrayBar downloaded, shown in the menu.
+    var coreVersion: String?
 }
 
 /// Everything persisted, in one file.

@@ -24,8 +24,9 @@ swift build -c release
 .build/release/XrayBar
 ```
 
-Stage 1 uses an existing Xray install for the `xray` binary and `geoip.dat`/`geosite.dat`
-(default: v2rayN's `~/Library/Application Support/v2rayN/bin`). Import servers with
+Choose **Update Xray and Routing Data** to download the official Xray release and
+`geoip.dat`/`geosite.dat` (checksum-verified). Until then an existing v2rayN install is used
+(`~/Library/Application Support/v2rayN/bin`). Import servers with
 **Import Link from Clipboard** (`vless://…`) or **Import from v2rayN…** (read-only).
 
 Connect asks for your administrator password: creating a TUN interface needs root.

@@ -120,3 +120,35 @@ struct IntegrationTests {
         #expect(s.detailedLog == nil && s.tunMTU == 1500)
     }
 }
+
+@Suite struct AssetsTests {
+    @Test func dgstField() {
+        let dgst = "MD5= aa\nSHA1= bb\nSHA2-256= 2e93a67e\nSHA2-512= cc\n"
+        #expect(Assets.field("SHA2-256=", in: dgst) == "2e93a67e")
+        #expect(Assets.field("SHA3=", in: dgst) == "")
+    }
+
+    @Test func checksumMismatchIsRejected() throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-sum.txt")
+        try Data("hello".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        try Assets.verify(file, expected: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+        #expect(throws: NSError.self) { try Assets.verify(file, expected: String(repeating: "0", count: 64)) }
+        #expect(throws: NSError.self) { try Assets.verify(file, expected: "") }
+    }
+}
+
+/// Opt-in (downloads ~110 MB): `scripts/test.sh --integration`. Installs into a temp directory.
+@Suite(.enabled(if: ProcessInfo.processInfo.environment["XRAYBAR_INTEGRATION"] != nil))
+struct AssetsDownloadTests {
+    @Test func downloadsAndVerifiesEverything() async throws {
+        let target = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-core-test")
+        defer { try? FileManager.default.removeItem(at: target) }
+        let version = try await Assets.update(dataSource: .runetfreedom, into: target)
+        #expect(version.hasPrefix("Xray "))
+        for f in ["xray/xray", "geoip.dat", "geosite.dat"] {
+            #expect(FileManager.default.fileExists(atPath: target.appendingPathComponent(f).path), "\(f)")
+        }
+        #expect(!FileManager.default.fileExists(atPath: target.path + ".new"))   // staging removed
+    }
+}
