@@ -2,6 +2,7 @@
 
 import Foundation
 import SQLite3
+import Vision
 
 enum ImportError: LocalizedError {
     case unsupported(String)
@@ -45,6 +46,33 @@ enum Import {
             publicKey: q["pbk"] ?? "",
             shortId: q["sid"] ?? "",
             spiderX: q["spx"] ?? "")
+    }
+
+    /// The same format in the other direction, for sharing (and QR codes).
+    static func link(for p: Profile) -> String {
+        var c = URLComponents()
+        c.scheme = "vless"
+        c.user = p.uuid
+        c.host = p.address.contains(":") ? "[\(p.address)]" : p.address
+        c.port = p.port
+        let query: [(String, String)] = [
+            ("type", p.network == "raw" ? "tcp" : p.network), ("encryption", p.encryption),
+            ("security", p.security), ("sni", p.sni), ("fp", p.fingerprint), ("pbk", p.publicKey),
+            ("sid", p.shortId), ("spx", p.spiderX), ("flow", p.flow),
+        ]
+        c.queryItems = query.filter { !$0.1.isEmpty }.map { URLQueryItem(name: $0.0, value: $0.1) }
+        c.fragment = p.name
+        return c.string ?? ""
+    }
+
+    // MARK: QR codes
+
+    /// Text of every QR code found in an image (Vision, on-device).
+    static func qrCodes(in image: CGImage) throws -> [String] {
+        let request = VNDetectBarcodesRequest()
+        request.symbologies = [.qr]
+        try VNImageRequestHandler(cgImage: image).perform([request])
+        return (request.results ?? []).compactMap(\.payloadStringValue)
     }
 
     // MARK: v2rayN (one-time, read-only)

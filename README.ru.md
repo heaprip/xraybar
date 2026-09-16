@@ -27,8 +27,9 @@ swift build -c release
 Пункт **Update Xray and Routing Data** скачивает официальный релиз Xray и файлы
 `geoip.dat`/`geosite.dat` с проверкой контрольных сумм. До этого используется установка v2rayN
 (`~/Library/Application Support/v2rayN/bin`). Серверы
-импортируются через **Import Link from Clipboard** (`vless://…`) или
-**Import from v2rayN…** (только чтение).
+импортируются через **Import from Clipboard** (ссылка `vless://…` или картинка с QR-кодом),
+**Import QR Code from Image…** или **Import from v2rayN…** (только чтение).
+**Share Server…** показывает QR-код.
 
 При подключении запрашивается пароль администратора: для создания TUN-интерфейса нужен root.
 Под root выполняется только один короткий читаемый скрипт:

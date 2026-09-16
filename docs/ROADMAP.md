@@ -14,7 +14,7 @@
 - Verified by the author on real traffic: import from v2rayN, connect, DNS through the tunnel.
 
 ## Stage 2 — configurations done properly
-- QR: show a profile as QR; import from an image or the clipboard (Vision).
+- ✅ QR: show a server as QR (Share Server…); import from an image file or the clipboard (Vision).
 - Edit/duplicate/delete profiles; routing rules editor (SwiftUI window).
 - ✅ Own copy of Xray and `.dat` files, downloaded on request, checksum-verified (runetfreedom or Loyalsoldier data).
 - Route exclusions (CIDR subtraction, as in v2rayN's TUN settings).

@@ -27,7 +27,8 @@ swift build -c release
 Choose **Update Xray and Routing Data** to download the official Xray release and
 `geoip.dat`/`geosite.dat` (checksum-verified). Until then an existing v2rayN install is used
 (`~/Library/Application Support/v2rayN/bin`). Import servers with
-**Import Link from Clipboard** (`vless://…`) or **Import from v2rayN…** (read-only).
+**Import from Clipboard** (a `vless://…` link or an image with a QR code), **Import QR Code
+from Image…**, or **Import from v2rayN…** (read-only). **Share Server…** shows a QR code.
 
 Connect asks for your administrator password: creating a TUN interface needs root.
 Only one short, readable script runs as root:

@@ -22,7 +22,7 @@ Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modif
 | As root | copies the config to `/var/run/xraybar`, starts xray, sets DNS, waits, stops xray, restores DNS; `--restore` cleans up after a session that died | same script |
 | Network (app) | only when you choose *Update Xray and Routing Data*: the Xray release and the chosen `.dat` source on GitHub, each file SHA-256-verified against its upstream checksum before use; ephemeral session, no cookies or cache | `7-Assets.swift` |
 | Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file, `core/` with the downloaded Xray and `.dat`); `/var/run/xraybar/` (root: config copy while connected, pids; `/var/db/xraybar/dns.saved` survives reboots; log readable by admin users only, errors only unless Detailed Log is on) | `2-Store.swift`, script |
-| Files read | the above; optionally v2rayN's database for one-time import (read-only) | `3-Import.swift` |
+| Files read | the above; optionally v2rayN's database for one-time import (read-only); the clipboard and image files only when you choose an Import command (QR decoded on-device by Vision) | `3-Import.swift`, `6-Menu.swift` |
 | Processes | the admin prompt (`NSAppleScript`), `xray run -test` for validation; `ditto` to unzip and `xray version` after a download | `5-Session.swift`, `7-Assets.swift` |
 | Secrets | profiles are stored as plain JSON (mode 600) in stage 1; Keychain is planned | `2-Store.swift` |
 

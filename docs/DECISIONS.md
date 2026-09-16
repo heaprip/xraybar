@@ -137,3 +137,11 @@ every file passes. Ephemeral URLSession. This file (`7-Assets.swift`) is the onl
 → No automatic updates or update checks (PRINCIPLES: quiet). Same-origin checksums prove
 integrity in transit, not upstream honesty (SECURITY).
 → Until the first download, v2rayN's copy is used, as before (D8).
+
+## D16. QR codes with system frameworks only (2026-09-21)
+
+→ Share: `Import.link(for:)` writes the standard `vless://` link; CoreImage's QR generator
+draws it inside a plain `NSAlert` with *Copy Link*. Import: *Import from Clipboard* accepts a
+link or a copied image; *Import QR Code from Image…* takes a file. Decoding is Vision's
+`VNDetectBarcodesRequest`, on-device. No screen scanning (it would need the Screen Recording
+permission); a screenshot copied to the clipboard covers that case.

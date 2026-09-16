@@ -152,3 +152,22 @@ struct AssetsDownloadTests {
         #expect(!FileManager.default.fileExists(atPath: target.path + ".new"))   // staging removed
     }
 }
+
+@Suite struct ShareTests {
+    let profile = Profile(name: "My Server / DE", address: "example.com", port: 8443,
+                          uuid: "11111111-2222-3333-4444-555555555555", flow: "xtls-rprx-vision",
+                          sni: "www.apple.com", publicKey: "PUB-key_1", shortId: "ab12")
+
+    @Test func linkRoundTrip() throws {
+        var back = try Import.profile(fromLink: Import.link(for: profile))
+        back.id = profile.id
+        #expect(back == profile)
+    }
+
+    @MainActor @Test func qrRoundTrip() throws {
+        let link = Import.link(for: profile)
+        let image = MenuBar.qrImage(link, size: 300)
+        let cg = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+        #expect(try Import.qrCodes(in: cg) == [link])
+    }
+}

@@ -2,6 +2,7 @@
 // menu extras (Wi-Fi, VPN): status on top, choices inline with checkmarks, actions below.
 
 import AppKit
+import CoreImage.CIFilterBuiltins
 
 @MainActor
 final class MenuBar: NSObject, NSMenuDelegate {
@@ -72,8 +73,10 @@ final class MenuBar: NSObject, NSMenuDelegate {
         menu.addItem(sourceItem)
 
         menu.addItem(.separator())
-        menu.addItem(action("Import Link from Clipboard", #selector(importClipboard)))
+        menu.addItem(action("Import from Clipboard", #selector(importClipboard)))
+        menu.addItem(action("Import QR Code from Image…", #selector(importQRImage)))
         menu.addItem(action("Import from v2rayN…", #selector(importV2rayN)))
+        if library.profile != nil { menu.addItem(action("Share Server…", #selector(shareServer))) }
         menu.addItem(.separator())
         menu.addItem(action("Show Xray Log", #selector(showLog)))
         let detailed = action("Detailed Log", #selector(toggleDetailedLog))
@@ -198,9 +201,36 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
+    /// A copied vless:// link (one per line), or a copied image containing QR codes.
     @objc private func importClipboard() {
-        let text = NSPasteboard.general.string(forType: .string) ?? ""
-        let links = text.split(whereSeparator: \.isNewline).map(String.init).filter { !$0.isEmpty }
+        let pasteboard = NSPasteboard.general
+        if let text = pasteboard.string(forType: .string) {
+            importLinks(text.split(whereSeparator: \.isNewline).map(String.init))
+        } else if let image = NSImage(pasteboard: pasteboard) {
+            importQR(image)
+        } else {
+            alert("Nothing to import", "Copy a vless:// link or an image with a QR code first.")
+        }
+    }
+
+    @objc private func importQRImage() {
+        NSApp.activate()
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.image]
+        panel.message = "Choose an image with a server QR code"
+        guard panel.runModal() == .OK, let url = panel.url, let image = NSImage(contentsOf: url) else { return }
+        importQR(image)
+    }
+
+    private func importQR(_ image: NSImage) {
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let codes = try? Import.qrCodes(in: cg), !codes.isEmpty
+        else { return alert("No QR code found", "The image does not contain a readable QR code.") }
+        importLinks(codes)
+    }
+
+    private func importLinks(_ lines: [String]) {
+        let links = lines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         do {
             let profiles = try links.map(Import.profile(fromLink:))
             guard !profiles.isEmpty else { return alert("Nothing to import", "Copy a vless:// link first.") }
@@ -223,6 +253,36 @@ final class MenuBar: NSObject, NSMenuDelegate {
         } catch {
             alert("Import failed", error.localizedDescription)
         }
+    }
+
+    /// The selected server as a QR code and link, e.g. to add it on a phone.
+    @objc private func shareServer() {
+        guard let profile = library.profile else { return }
+        let link = Import.link(for: profile)
+        NSApp.activate()
+        let a = NSAlert()
+        a.messageText = profile.name
+        a.informativeText = "Scan with another device. The code contains the server's credentials."
+        a.accessoryView = NSImageView(image: Self.qrImage(link, size: 240))
+        a.accessoryView?.frame = NSRect(x: 0, y: 0, width: 240, height: 240)
+        a.addButton(withTitle: "Done")
+        a.addButton(withTitle: "Copy Link")
+        if a.runModal() == .alertSecondButtonReturn {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(link, forType: .string)
+        }
+    }
+
+    static func qrImage(_ text: String, size: CGFloat) -> NSImage {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(text.utf8)
+        filter.correctionLevel = "M"
+        guard let code = filter.outputImage else { return NSImage() }
+        let scaled = code.transformed(by: CGAffineTransform(scaleX: size / code.extent.width, y: size / code.extent.height))
+        let rep = NSCIImageRep(ciImage: scaled)
+        let image = NSImage(size: rep.size)
+        image.addRepresentation(rep)
+        return image
     }
 
     @objc private func showLog() {
