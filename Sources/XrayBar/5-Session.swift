@@ -145,6 +145,8 @@ final class Session {
         let running = Self.runningPID() != nil
         switch state {
         case .connecting where running:
+            // The session works on its own root-owned copy by now; don't keep credentials around.
+            try? FileManager.default.removeItem(at: Store.configFile)
             set(.connected)
         case .connecting where Date().timeIntervalSince(connectStarted) > 15:
             fail("Xray did not start.\n\n" + Self.logTail())

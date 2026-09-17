@@ -189,3 +189,12 @@ Contents/Resources where SwiftPM's accessor looks) and signs it ad hoc. Menu gai
 *Open at Login* via `SMAppService.mainApp`, shown only when running from a bundle.
 → `io.github.xraybar.XrayBar` is a placeholder identifier; change it to a domain the project
 controls before any public release.
+
+## D21. Keychain waits for stage 3; generated config deleted once running (2026-09-21)
+
+Keychain items are bound to the app's code signature. With an ad-hoc signature every rebuild
+is a "different app", so macOS would ask for Keychain access after each build, and the
+generated config would still hold the same credentials in plain text while connecting.
+→ Keychain moves with the signed helper in stage 3. Meanwhile the user-side `config.json` is
+deleted as soon as the root session runs (it uses its own root-only copy, itself deleted when
+the session ends); `library.json` stays mode 0600.
