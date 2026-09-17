@@ -67,6 +67,8 @@ struct Settings: Codable, Equatable, Sendable {
     var dataSource: Assets.DataSource?
     /// Version line of the xray XrayBar downloaded, shown in the menu.
     var coreVersion: String?
+    /// IPv4 addresses/CIDRs routed by the system outside the tunnel (never reach Xray).
+    var routeExclusions: [String]?
 }
 
 /// Everything persisted, in one file.

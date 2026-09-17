@@ -45,7 +45,8 @@ enum XrayConfig {
                 "MTU": settings.tunMTU,
                 "gateway": ["172.18.0.1/30"],
                 // Xray installs these routes itself. IPv4 only until IPv6 is verified (roadmap).
-                "autoSystemRoutingTable": ["0.0.0.0/0"],
+                // Excluded networks are simply left out, so the system routes them as usual.
+                "autoSystemRoutingTable": CIDR.subtract(settings.routeExclusions ?? [], from: "0.0.0.0/0"),
                 // Outbounds bind to the physical interface, so Xray's own traffic
                 // does not loop back into the tunnel (D2).
                 "autoOutboundsInterface": "auto",
@@ -156,4 +157,43 @@ enum XrayConfig {
     }
 
     private static func nonEmpty(_ d: [String: String]) -> [String: String] { d.filter { !$0.value.isEmpty } }
+}
+
+/// IPv4 networks, just enough to cut excluded networks out of 0.0.0.0/0.
+enum CIDR {
+    struct Net: Equatable { var base: UInt32; var prefix: Int }
+
+    /// "10.0.0.0/8", or a single address meaning /32. Nil if it is not IPv4 CIDR.
+    static func parse(_ text: String) -> Net? {
+        let parts = text.trimmingCharacters(in: .whitespaces).split(separator: "/", omittingEmptySubsequences: false)
+        let octets = parts.first?.split(separator: ".", omittingEmptySubsequences: false).compactMap { UInt32($0) } ?? []
+        guard parts.count <= 2, octets.count == 4, octets.allSatisfy({ $0 < 256 }),
+              let prefix = parts.count == 2 ? Int(parts[1]) : 32, (0...32).contains(prefix) else { return nil }
+        let address = octets.reduce(0) { $0 << 8 | $1 }
+        return Net(base: address & mask(prefix), prefix: prefix)
+    }
+
+    static func string(_ n: Net) -> String {
+        (0..<4).map { String(n.base >> (24 - 8 * $0) & 0xFF) }.joined(separator: ".") + "/\(n.prefix)"
+    }
+
+    /// The fewest networks that cover `network` minus every exclusion: a network that
+    /// partly overlaps an exclusion is split in halves until each half is in or out.
+    static func subtract(_ exclusions: [String], from network: String) -> [String] {
+        var nets = [parse(network)!]
+        for ex in exclusions.compactMap(parse) {
+            nets = nets.flatMap { cut(ex, from: $0) }
+        }
+        return nets.map(string)
+    }
+
+    private static func cut(_ ex: Net, from net: Net) -> [Net] {
+        if ex.prefix <= net.prefix { return ex.base == net.base & mask(ex.prefix) ? [] : [net] }  // covers it, or apart
+        guard net.base == ex.base & mask(net.prefix) else { return [net] }                        // apart
+        let half = net.prefix + 1
+        return [Net(base: net.base, prefix: half), Net(base: net.base | 1 << (32 - half), prefix: half)]
+            .flatMap { cut(ex, from: $0) }
+    }
+
+    private static func mask(_ prefix: Int) -> UInt32 { prefix == 0 ? 0 : ~0 << (32 - prefix) }
 }

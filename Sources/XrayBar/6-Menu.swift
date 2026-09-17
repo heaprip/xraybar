@@ -69,6 +69,9 @@ final class MenuBar: NSObject, NSMenuDelegate {
         let sourceItem = NSMenuItem(title: "Routing Data Source", action: nil, keyEquivalent: "")
         sourceItem.submenu = sources
         menu.addItem(sourceItem)
+        let excluded = library.settings.routeExclusions ?? []
+        menu.addItem(action(excluded.isEmpty ? "Exclude from Tunnel…" : "Exclude from Tunnel (\(excluded.count))…",
+                            #selector(editExclusions)))
 
         menu.addItem(.separator())
         menu.addItem(action("Import from Clipboard", #selector(importClipboard)))
@@ -238,6 +241,30 @@ final class MenuBar: NSObject, NSMenuDelegate {
         library.settings.dataSource = (sender.representedObject as? String).flatMap(Assets.DataSource.init)
         save()
         alert("Routing data source changed", "Choose Update Xray and Routing Data to download it.")
+    }
+
+    /// Networks the system routes outside the tunnel, e.g. a work network reached by another VPN.
+    @objc private func editExclusions() {
+        NSApp.activate()
+        let a = NSAlert()
+        a.messageText = "Exclude from Tunnel"
+        a.informativeText = "IPv4 addresses or networks, separated by commas, that bypass Xray entirely "
+            + "(unlike “direct” rules, which still pass through it). Example: 10.8.0.0/16, 203.0.113.7"
+        let field = NSTextField(string: (library.settings.routeExclusions ?? []).joined(separator: ", "))
+        field.frame = NSRect(x: 0, y: 0, width: 320, height: 24)
+        field.placeholderString = "10.8.0.0/16, 203.0.113.7"
+        a.accessoryView = field
+        a.window.initialFirstResponder = field
+        a.addButton(withTitle: "Save")
+        a.addButton(withTitle: "Cancel")
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+
+        let entries = field.stringValue.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let invalid = entries.filter { CIDR.parse($0) == nil }
+        guard invalid.isEmpty else { return alert("Not saved", "Not an IPv4 address or network: " + invalid.joined(separator: ", ")) }
+        library.settings.routeExclusions = entries
+        saveSelection()
     }
 
     @objc private func toggleDetailedLog() {

@@ -165,3 +165,15 @@ Saving a screenshot to a file to import a QR code is the most common annoyance i
 crosshair, the user selects the code, Vision decodes it, the file is deleted. XrayBar does not
 capture the screen itself and asks for no Screen Recording permission of its own. It replaces
 *Import QR Code from Image…* (open the image in Preview and scan it instead).
+
+## D19. Tunnel exclusions by subtracting from the TUN routes (2026-09-21)
+
+Some networks must not enter Xray at all (a work network behind another VPN, an unusual LAN).
+A `direct` rule is not enough: that traffic still passes through the tunnel and Xray.
+
+→ *Exclude from Tunnel…* takes IPv4 addresses/CIDRs (validated, stored in settings). The
+generator sets `autoSystemRoutingTable` to 0.0.0.0/0 minus those networks: a network that
+partly overlaps an exclusion is halved until each half is fully in or out, which yields the
+minimal list (one excluded address → 32 routes). Excluded networks keep their normal system
+route. Same idea as v2rayN's RouteExcludeAddress; written independently (`CIDR` in 4-Config).
+IPv6 exclusions wait for IPv6 routing (stage 3).

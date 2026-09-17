@@ -171,3 +171,37 @@ struct AssetsDownloadTests {
         #expect(try Import.qrCodes(in: cg) == [link])
     }
 }
+
+@Suite struct CIDRTests {
+    @Test func parse() {
+        #expect(CIDR.parse("10.1.2.3/8") == CIDR.Net(base: 0x0A00_0000, prefix: 8))
+        #expect(CIDR.parse("192.168.1.10") == CIDR.Net(base: 0xC0A8_010A, prefix: 32))
+        for bad in ["", "10.0.0/8", "256.0.0.0/8", "10.0.0.0/33", "fe80::/10", "10.0.0.0/8/1", "a.b.c.d"] {
+            #expect(CIDR.parse(bad) == nil, "\(bad)")
+        }
+    }
+
+    @Test func nothingExcludedKeepsEverything() {
+        #expect(CIDR.subtract([], from: "0.0.0.0/0") == ["0.0.0.0/0"])
+    }
+
+    @Test func excludingOneHalf() {
+        #expect(CIDR.subtract(["0.0.0.0/1"], from: "0.0.0.0/0") == ["128.0.0.0/1"])
+    }
+
+    @Test func excludingOneAddressLeaves32Networks() {
+        let rest = CIDR.subtract(["203.0.113.7"], from: "0.0.0.0/0")
+        #expect(rest.count == 32)
+        #expect(!rest.contains { CIDR.parse($0)!.prefix == 32 && $0.hasPrefix("203.0.113.7") })
+        // Coverage: 2^32 - 1 addresses remain.
+        let total = rest.map { UInt64(1) << (32 - CIDR.parse($0)!.prefix) }.reduce(0, +)
+        #expect(total == (UInt64(1) << 32) - 1)
+    }
+
+    @Test func overlappingExclusionsAndGarbageIgnored() {
+        let rest = CIDR.subtract(["10.0.0.0/8", "10.1.0.0/16", "nonsense"], from: "0.0.0.0/0")
+        let total = rest.map { UInt64(1) << (32 - CIDR.parse($0)!.prefix) }.reduce(0, +)
+        #expect(total == (UInt64(1) << 32) - (UInt64(1) << 24))
+        #expect(rest.count == 8)
+    }
+}
