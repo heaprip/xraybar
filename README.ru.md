@@ -20,9 +20,11 @@
 Нужно: macOS 14+, Command Line Tools (`xcode-select --install`). Xcode не нужен.
 
 ```sh
-swift build -c release
-.build/release/XrayBar
+scripts/make-app.sh                          # собирает build/XrayBar.app (ad-hoc подпись)
+cp -R build/XrayBar.app /Applications/       # и запускайте из /Applications
 ```
+
+Для разработки подойдёт и `swift run`.
 
 Пункт **Update Xray and Routing Data** скачивает официальный релиз Xray и файлы
 `geoip.dat`/`geosite.dat` с проверкой контрольных сумм. До этого используется установка v2rayN

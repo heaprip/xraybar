@@ -48,6 +48,14 @@ Does not protect against (known limitations, stage 1):
   not that it is benign. You can build Xray from source with Go and compare.
 - Traffic analysis or anything outside Xray's own security properties.
 
+## About the app bundle
+
+`scripts/make-app.sh` signs the bundle ad hoc. `codesign --verify --strict XrayBar.app` then
+tells you whether anything in it, including the root script, changed since it was built. An
+ad-hoc signature carries no identity: whoever can modify the bundle can also re-sign it, so it
+detects accidents and naive tampering, not a determined local attacker (stage 3 addresses that).
+Open at Login uses a standard login item (System Settings › General › Login Items).
+
 ## How to verify
 
 1. `scripts/audit.sh` — deterministic inventory: size budget, every use of process

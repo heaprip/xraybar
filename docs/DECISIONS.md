@@ -177,3 +177,15 @@ partly overlaps an exclusion is halved until each half is fully in or out, which
 minimal list (one excluded address → 32 routes). Excluded networks keep their normal system
 route. Same idea as v2rayN's RouteExcludeAddress; written independently (`CIDR` in 4-Config).
 IPv6 exclusions wait for IPv6 routing (stage 3).
+
+## D20. App bundle now; bundle ID is a placeholder (2026-09-21)
+
+Without a bundle, alerts showed a generic icon, macOS attributes permissions (e.g. screen
+capture for QR scanning) to the terminal that launched the binary, and login items are
+impossible.
+
+→ `scripts/make-app.sh` builds `build/XrayBar.app` (LSUIElement, resource bundle in
+Contents/Resources where SwiftPM's accessor looks) and signs it ad hoc. Menu gains
+*Open at Login* via `SMAppService.mainApp`, shown only when running from a bundle.
+→ `io.github.xraybar.XrayBar` is a placeholder identifier; change it to a domain the project
+controls before any public release.

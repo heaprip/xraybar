@@ -3,6 +3,7 @@
 
 import AppKit
 import CoreImage.CIFilterBuiltins
+import ServiceManagement
 
 @MainActor
 final class MenuBar: NSObject, NSMenuDelegate {
@@ -84,6 +85,11 @@ final class MenuBar: NSObject, NSMenuDelegate {
         detailed.state = library.settings.detailedLog == true ? .on : .off
         menu.addItem(detailed)
         menu.addItem(action("Show Data Folder", #selector(showDataFolder)))
+        if Bundle.main.bundlePath.hasSuffix(".app") {   // login items need an app bundle
+            let login = action("Open at Login", #selector(toggleOpenAtLogin))
+            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            menu.addItem(login)
+        }
         menu.addItem(.separator())
         menu.addItem(action("Quit XrayBar", #selector(quit), key: "q"))
     }
@@ -265,6 +271,19 @@ final class MenuBar: NSObject, NSMenuDelegate {
         guard invalid.isEmpty else { return alert("Not saved", "Not an IPv4 address or network: " + invalid.joined(separator: ", ")) }
         library.settings.routeExclusions = entries
         saveSelection()
+    }
+
+    /// A standard login item (System Settings › General › Login Items), not a launch agent.
+    @objc private func toggleOpenAtLogin() {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            } else {
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            alert("Could not change Open at Login", error.localizedDescription)
+        }
     }
 
     @objc private func toggleDetailedLog() {

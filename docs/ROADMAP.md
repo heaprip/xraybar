@@ -24,4 +24,5 @@
 - Privileged LaunchDaemon helper instead of an admin prompt per connect.
 - Credentials in Keychain.
 - Sleep/wake, network switch, IPv6 verified.
-- `.app` bundle script, ad-hoc signing; Developer ID/notarization only if distributed.
+- ✅ `.app` bundle script with ad-hoc signing, Open at Login (done early, independent of the helper).
+- Developer ID/notarization only if distributed.

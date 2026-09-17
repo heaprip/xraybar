@@ -20,9 +20,11 @@ when you disconnect. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md).
 Requirements: macOS 14+, Command Line Tools (`xcode-select --install`). No Xcode.
 
 ```sh
-swift build -c release
-.build/release/XrayBar
+scripts/make-app.sh                          # builds build/XrayBar.app (ad-hoc signed)
+cp -R build/XrayBar.app /Applications/       # then open it from /Applications
 ```
+
+For development, `swift run` works too.
 
 Choose **Update Xray and Routing Data** to download the official Xray release and
 `geoip.dat`/`geosite.dat` (checksum-verified). Until then an existing v2rayN install is used

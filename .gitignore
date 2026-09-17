@@ -11,3 +11,4 @@ DerivedData/
 /poc/
 /xray-macos-menubar-architecture.md
 .vscode/
+/build/
