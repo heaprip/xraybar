@@ -78,7 +78,7 @@ enum Assets {
     // MARK: Helpers
 
     private static func download(_ url: String, to destination: URL) async throws -> URL {
-        let (temp, response) = try await session.download(from: URL(string: url)!)
+        let (temp, response) = try await retrying { try await session.download(from: URL(string: url)!) }
         try check(response, url)
         try? FileManager.default.removeItem(at: destination)
         try FileManager.default.moveItem(at: temp, to: destination)
@@ -86,9 +86,23 @@ enum Assets {
     }
 
     private static func text(_ url: String) async throws -> String {
-        let (data, response) = try await session.data(from: URL(string: url)!)
+        let (data, response) = try await retrying { try await session.data(from: URL(string: url)!) }
         try check(response, url)
         return String(decoding: data, as: UTF8.self)
+    }
+
+    /// GitHub's release downloads fail now and then (HTTP 502/503/504, dropped connections):
+    /// three attempts, 2 s then 4 s apart. Other HTTP errors are returned at once.
+    private static func retrying<T>(_ request: () async throws -> (T, URLResponse)) async throws -> (T, URLResponse) {
+        for attempt in 1...3 {
+            do {
+                let result = try await request()
+                let code = (result.1 as? HTTPURLResponse)?.statusCode ?? 0
+                if !(500...599).contains(code) || attempt == 3 { return result }
+            } catch where attempt < 3 && error is URLError {}
+            try await Task.sleep(for: .seconds(2 * attempt))
+        }
+        return try await request()   // not reached
     }
 
     private static func check(_ response: URLResponse, _ url: String) throws {

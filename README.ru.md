@@ -28,8 +28,9 @@ swift build -c release
 `geoip.dat`/`geosite.dat` с проверкой контрольных сумм. До этого используется установка v2rayN
 (`~/Library/Application Support/v2rayN/bin`). Серверы
 импортируются через **Import from Clipboard** (ссылка `vless://…` или картинка с QR-кодом),
-**Import QR Code from Image…** или **Import from v2rayN…** (только чтение).
-**Share Server…** показывает QR-код.
+**Scan QR Code on Screen…** (выделите код, как при скриншоте) или **Import from v2rayN…**
+(только чтение). **Share Server…** показывает QR-код. Удерживайте **Option** в меню, чтобы
+удалить сервер или набор правил.
 
 При подключении запрашивается пароль администратора: для создания TUN-интерфейса нужен root.
 Под root выполняется только один короткий читаемый скрипт:

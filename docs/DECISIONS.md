@@ -145,3 +145,23 @@ draws it inside a plain `NSAlert` with *Copy Link*. Import: *Import from Clipboa
 link or a copied image; *Import QR Code from Image…* takes a file. Decoding is Vision's
 `VNDetectBarcodesRequest`, on-device. No screen scanning (it would need the Screen Recording
 permission); a screenshot copied to the clipboard covers that case.
+
+## D17. Long menu sections, removal, no editors (2026-09-21)
+
+The author decided editor windows are not needed. Imported lists grow (4 servers, 9 routing
+sets after a v2rayN import), and duplicate names were indistinguishable.
+
+→ A section shows up to four choices inline; with more, the selected one stays inline and the
+rest move to an "Other …" submenu (the Wi-Fi menu pattern; NSMenu has no collapsible sections).
+→ A name used more than once is shown with the server address or the rule count.
+→ Holding Option turns each choice into "Remove “…”…" with a confirmation (NSMenu alternates).
+→ Downloads retry twice on HTTP 5xx or network errors (GitHub returned 504 in testing).
+→ Until XrayBar is a bundled .app, alerts use an SF Symbol as the app icon.
+
+## D18. QR import by scanning the screen with Apple's screencapture (2026-09-21)
+
+Saving a screenshot to a file to import a QR code is the most common annoyance in clients.
+→ *Scan QR Code on Screen…* runs `/usr/sbin/screencapture -i -x <temp file>`: the system
+crosshair, the user selects the code, Vision decodes it, the file is deleted. XrayBar does not
+capture the screen itself and asks for no Screen Recording permission of its own. It replaces
+*Import QR Code from Image…* (open the image in Preview and scan it instead).

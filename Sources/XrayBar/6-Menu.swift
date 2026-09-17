@@ -41,21 +41,19 @@ final class MenuBar: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Server"))
         if library.profiles.isEmpty { menu.addItem(disabled("No servers — import one below")) }
-        for p in library.profiles {
-            let i = action(p.name, #selector(selectProfile(_:)))
-            i.representedObject = p.id
-            i.state = p.id == library.profile?.id ? .on : .off
-            menu.addItem(i)
+        let servers = library.profiles.map { p in
+            (p.id, p.name, p.name + "  " + p.address)   // the address tells same-named servers apart
         }
+        addChoices(servers, selected: library.profile?.id, more: "Other Servers", to: menu,
+                   #selector(selectProfile(_:)), remove: #selector(removeProfile(_:)))
 
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Routing"))
-        for r in library.routingSets {
-            let i = action(r.name, #selector(selectRouting(_:)))
-            i.representedObject = r.id
-            i.state = r.id == library.routing.id ? .on : .off
-            menu.addItem(i)
+        let routing = library.routingSets.map { r in
+            (r.id, r.name, r.name + "  (\(r.rules.count) rules)")
         }
+        addChoices(routing, selected: library.routing.id, more: "Other Routing Sets", to: menu,
+                   #selector(selectRouting(_:)), remove: #selector(removeRouting(_:)))
 
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Xray"))
@@ -74,7 +72,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
         menu.addItem(action("Import from Clipboard", #selector(importClipboard)))
-        menu.addItem(action("Import QR Code from Image…", #selector(importQRImage)))
+        menu.addItem(action("Scan QR Code on Screen…", #selector(scanScreen)))
         menu.addItem(action("Import from v2rayN…", #selector(importV2rayN)))
         if library.profile != nil { menu.addItem(action("Share Server…", #selector(shareServer))) }
         menu.addItem(.separator())
@@ -85,6 +83,34 @@ final class MenuBar: NSObject, NSMenuDelegate {
         menu.addItem(action("Show Data Folder", #selector(showDataFolder)))
         menu.addItem(.separator())
         menu.addItem(action("Quit XrayBar", #selector(quit), key: "q"))
+    }
+
+    /// Choices with a checkmark on the selected one, like the Wi-Fi menu: up to four inline;
+    /// beyond that only the selected one inline and the rest in a submenu. A name that occurs
+    /// more than once is shown with its detail (address or rule count) to tell them apart.
+    /// Holding Option turns every choice into "Remove …" (the standard alternate-item pattern).
+    private func addChoices(_ items: [(id: UUID, name: String, detailed: String)], selected: UUID?,
+                            more: String, to menu: NSMenu, _ selector: Selector, remove: Selector) {
+        let names = Dictionary(grouping: items, by: \.name)
+        func add(_ c: (id: UUID, name: String, detailed: String), to menu: NSMenu) {
+            let title = names[c.name]!.count > 1 ? c.detailed : c.name
+            let i = action(title, selector)
+            i.representedObject = c.id
+            i.state = c.id == selected ? .on : .off
+            menu.addItem(i)
+            let alt = action("Remove “\(title)”…", remove)
+            alt.representedObject = c.id
+            alt.isAlternate = true
+            alt.keyEquivalentModifierMask = .option
+            menu.addItem(alt)
+        }
+        guard items.count > 4 else { return items.forEach { add($0, to: menu) } }
+        items.filter { $0.id == selected }.forEach { add($0, to: menu) }
+        let submenu = NSMenu()
+        items.filter { $0.id != selected }.forEach { add($0, to: submenu) }
+        let other = NSMenuItem(title: more, action: nil, keyEquivalent: "")
+        other.submenu = submenu
+        menu.addItem(other)
     }
 
     private var statusText: String {
@@ -164,6 +190,31 @@ final class MenuBar: NSObject, NSMenuDelegate {
         saveSelection()
     }
 
+    @objc private func removeProfile(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? UUID,
+              let p = library.profiles.first(where: { $0.id == id }), confirmRemove(p.name) else { return }
+        library.profiles.removeAll { $0.id == id }
+        save()
+    }
+
+    @objc private func removeRouting(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? UUID,
+              let r = library.routingSets.first(where: { $0.id == id }), confirmRemove(r.name) else { return }
+        library.routingSets.removeAll { $0.id == id }
+        save()
+    }
+
+    /// Removing the selected item selects the first remaining one on the next Connect.
+    private func confirmRemove(_ name: String) -> Bool {
+        NSApp.activate()
+        let a = NSAlert()
+        a.messageText = "Remove “\(name)”?"
+        a.informativeText = "This cannot be undone. A running connection is not affected."
+        a.addButton(withTitle: "Remove").hasDestructiveAction = true
+        a.addButton(withTitle: "Cancel")
+        return a.runModal() == .alertFirstButtonReturn
+    }
+
     /// Downloads and verifies Xray and the routing data (7-Assets), then switches to them.
     @objc private func updateAssets() {
         updating = true
@@ -174,11 +225,12 @@ final class MenuBar: NSObject, NSMenuDelegate {
                 library.settings.assetsDir = Assets.dir.path
                 library.settings.coreVersion = version
                 save()
+                updating = false
                 alert("Xray updated", "\(coreStatus). Checksums verified. Takes effect on the next Connect.")
             } catch {
+                updating = false
                 alert("Update failed", error.localizedDescription)
             }
-            updating = false
         }
     }
 
@@ -213,13 +265,22 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func importQRImage() {
-        NSApp.activate()
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.image]
-        panel.message = "Choose an image with a server QR code"
-        guard panel.runModal() == .OK, let url = panel.url, let image = NSImage(contentsOf: url) else { return }
-        importQR(image)
+    /// The system screenshot crosshair (as with ⌘⇧4): select the QR code, it is decoded and the
+    /// temporary capture deleted at once. Escape cancels. Uses Apple's own screencapture tool,
+    /// so XrayBar never captures the screen itself.
+    @objc private func scanScreen() {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-qr-\(UUID()).png")
+        let capture = Process()
+        capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        capture.arguments = ["-i", "-x", file.path]   // interactive selection, no shutter sound
+        capture.terminationHandler = { _ in
+            Task { @MainActor in
+                defer { try? FileManager.default.removeItem(at: file) }
+                guard let image = NSImage(contentsOf: file) else { return }   // cancelled
+                self.importQR(image)
+            }
+        }
+        do { try capture.run() } catch { alert("Screen capture failed", error.localizedDescription) }
     }
 
     private func importQR(_ image: NSImage) {
