@@ -32,7 +32,7 @@ cp -R build/XrayBar.app /Applications/       # и запускайте из /App
 `geoip.dat`/`geosite.dat`. Всё сверяется по контрольным суммам. До этого используется установка
 v2rayN (`~/Library/Application Support/v2rayN/bin`). Серверы
 импортируются через **Import from Clipboard** (ссылка `vless://…` или картинка с QR-кодом),
-**Scan QR Code on Screen…** (выделите код, как при скриншоте) или **Import from v2rayN…**
+**Scan QR Code on Screen…** (кликните по окну с кодом) или **Import from v2rayN…**
 (только чтение). **Share Server…** показывает QR-код. Удерживайте **Option** в меню, чтобы
 удалить сервер или набор правил.
 

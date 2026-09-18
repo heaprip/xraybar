@@ -32,7 +32,7 @@ one-click switch back if no traffic passes. **Update Routing Data** fetches
 `geoip.dat`/`geosite.dat`. Everything is checksum-verified. Until then an existing v2rayN
 install is used (`~/Library/Application Support/v2rayN/bin`). Import servers with
 **Import from Clipboard** (a `vless://…` link or an image with a QR code), **Scan QR Code on
-Screen…** (select the code like a screenshot), or **Import from v2rayN…** (read-only).
+Screen…** (click the window showing the code), or **Import from v2rayN…** (read-only).
 **Share Server…** shows a QR code. Hold **Option** in the menu to remove a server or routing set.
 
 Connect asks for your administrator password: creating a TUN interface needs root.

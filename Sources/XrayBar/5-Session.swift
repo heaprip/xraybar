@@ -32,6 +32,10 @@ final class Session {
 
     func connect(_ library: Library) {
         guard let profile = library.profile else { return fail("Add a profile first.") }
+        if let other = Self.otherTunnel() {
+            return fail("Another VPN or TUN (\(other)) already routes all traffic, for example v2rayN in TUN mode. "
+                        + "Turn it off, then connect again.")
+        }
         do {
             let config = XrayConfig.make(profile: profile, routing: library.routing, settings: library.settings)
             try Store.write(XrayConfig.data(config), to: Store.configFile)
@@ -141,6 +145,24 @@ final class Session {
     }
 
     // MARK: Status
+
+    /// The utun interface that currently carries internet traffic, if it is not ours. Two
+    /// tunnels cannot both own the same routes ("failed to add system route … file exists").
+    static func otherTunnel() -> String? {
+        guard runningPID() == nil else { return nil }
+        let route = Process()
+        route.executableURL = URL(fileURLWithPath: "/sbin/route")
+        route.arguments = ["-n", "get", "1.1.1.1"]
+        let out = Pipe()
+        route.standardOutput = out
+        route.standardError = FileHandle.nullDevice
+        guard (try? route.run()) != nil else { return nil }
+        let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        route.waitUntilExit()
+        let interface = text.split(separator: "\n").first { $0.contains("interface:") }?
+            .split(separator: " ").last.map(String.init)
+        return interface?.hasPrefix("utun") == true ? interface : nil
+    }
 
     /// PID written by the root session, if that process is alive. `kill(pid, 0)` on a root
     /// process from a user process fails with EPERM, which still means "exists".

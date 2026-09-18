@@ -57,37 +57,14 @@ final class MenuBar: NSObject, NSMenuDelegate {
                    #selector(selectRouting(_:)), remove: #selector(removeRouting(_:)))
 
         menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Xray"))
-        menu.addItem(disabled(coreStatus))
-        let versions = NSMenuItem(title: "Xray Version", action: nil, keyEquivalent: "")
-        versions.submenu = xrayVersionsMenu()
-        menu.addItem(versions)
-        menu.addItem(updating ? disabled("Updating…") : action("Update Routing Data", #selector(updateData)))
-        let sources = NSMenu()
-        for source in Assets.DataSource.allCases {
-            let i = action(source.title, #selector(selectDataSource(_:)))
-            i.representedObject = source.rawValue
-            i.state = source == dataSource ? .on : .off
-            sources.addItem(i)
-        }
-        let sourceItem = NSMenuItem(title: "Routing Data Source", action: nil, keyEquivalent: "")
-        sourceItem.submenu = sources
-        menu.addItem(sourceItem)
-        let excluded = library.settings.routeExclusions ?? []
-        menu.addItem(action(excluded.isEmpty ? "Exclude from Tunnel…" : "Exclude from Tunnel (\(excluded.count))…",
-                            #selector(editExclusions)))
-
-        menu.addItem(.separator())
         menu.addItem(action("Import from Clipboard", #selector(importClipboard)))
         menu.addItem(action("Scan QR Code on Screen…", #selector(scanScreen)))
         menu.addItem(action("Import from v2rayN…", #selector(importV2rayN)))
         if library.profile != nil { menu.addItem(action("Share Server…", #selector(shareServer))) }
+
         menu.addItem(.separator())
-        menu.addItem(action("Show Xray Log", #selector(showLog)))
-        let detailed = action("Detailed Log", #selector(toggleDetailedLog))
-        detailed.state = library.settings.detailedLog == true ? .on : .off
-        menu.addItem(detailed)
-        menu.addItem(action("Show Data Folder", #selector(showDataFolder)))
+        menu.addItem(submenu(xrayTitle, xrayMenu()))
+        menu.addItem(submenu("Diagnostics", diagnosticsMenu()))
         if Bundle.main.bundlePath.hasSuffix(".app") {   // login items need an app bundle
             let login = action("Open at Login", #selector(toggleOpenAtLogin))
             login.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -137,34 +114,69 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
     private var dataSource: Assets.DataSource { library.settings.dataSource ?? .runetfreedom }
 
-    /// "Xray 26.9.9 · runetfreedom (Russia)": the xray in use and where the routing data comes from.
-    private var coreStatus: String {
-        let s = library.settings
-        let xray = s.xrayBinary.map { "Xray " + URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent }
+    /// "Xray v26.9.9": the version in use, visible without opening the submenu.
+    private var xrayTitle: String {
+        library.settings.xrayBinary.map { "Xray " + URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent }
             ?? "Xray from v2rayN"
-        return xray + " · " + (s.assetsDir == Assets.dir.path ? dataSource.title : "data from v2rayN")
     }
 
-    /// Installed versions (checkmark on the one in use, whether it has carried traffic yet),
-    /// the version tested with XrayBar if missing, and a check for newer releases.
-    private func xrayVersionsMenu() -> NSMenu {
+    /// Versions (checkmark on the one in use; "works" once it has carried traffic), routing
+    /// data, tunnel exclusions: everything about the core, one level down.
+    private func xrayMenu() -> NSMenu {
         let menu = NSMenu()
         let s = library.settings
-        var paths = Assets.installedXray().map { ($0, Assets.xrayPath($0)) }
-        if FileManager.default.isExecutableFile(atPath: Settings.v2rayNXray) { paths.append(("v2rayN's Xray", Settings.v2rayNXray)) }
-        for (name, path) in paths {
-            let note = path == s.goodXray ? "works" : "not yet tested"
-            let i = action("\(name) — \(note)", #selector(selectXray(_:)))
+        menu.addItem(.sectionHeader(title: "Version"))
+        var versions = Assets.installedXray().map { tag in
+            (Assets.xrayPath(tag), tag == Assets.testedXray ? "\(tag) (tested with XrayBar)" : tag)
+        }
+        if FileManager.default.isExecutableFile(atPath: Settings.v2rayNXray) {
+            versions.append((Settings.v2rayNXray, "Xray from v2rayN"))
+        }
+        for (path, title) in versions {
+            let i = action(path == s.goodXray ? "\(title) — works" : title, #selector(selectXray(_:)))
             i.representedObject = path
             i.state = path == s.xrayPath ? .on : .off
             menu.addItem(i)
         }
-        menu.addItem(.separator())
         if !Assets.installedXray().contains(Assets.testedXray) {
             menu.addItem(action("Download \(Assets.testedXray) (tested with XrayBar)", #selector(downloadTestedXray)))
         }
         menu.addItem(updating ? disabled("Downloading…") : action("Check for Newer Versions…", #selector(checkNewerXray)))
+
+        menu.addItem(.separator())
+        menu.addItem(.sectionHeader(title: "Routing Data"))
+        menu.addItem(disabled(s.assetsDir == Assets.dir.path ? dataSource.title : "From v2rayN"))
+        menu.addItem(updating ? disabled("Updating…") : action("Update Routing Data", #selector(updateData)))
+        let sources = NSMenu()
+        for source in Assets.DataSource.allCases {
+            let i = action(source.title, #selector(selectDataSource(_:)))
+            i.representedObject = source.rawValue
+            i.state = source == dataSource ? .on : .off
+            sources.addItem(i)
+        }
+        menu.addItem(submenu("Source", sources))
+
+        menu.addItem(.separator())
+        let excluded = s.routeExclusions ?? []
+        menu.addItem(action(excluded.isEmpty ? "Exclude from Tunnel…" : "Exclude from Tunnel (\(excluded.count))…",
+                            #selector(editExclusions)))
         return menu
+    }
+
+    private func diagnosticsMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(action("Show Xray Log", #selector(showLog)))
+        let detailed = action("Detailed Log", #selector(toggleDetailedLog))
+        detailed.state = library.settings.detailedLog == true ? .on : .off
+        menu.addItem(detailed)
+        menu.addItem(action("Show Data Folder", #selector(showDataFolder)))
+        return menu
+    }
+
+    private func submenu(_ title: String, _ menu: NSMenu) -> NSMenuItem {
+        let i = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        i.submenu = menu
+        return i
     }
 
     private func action(_ title: String, _ selector: Selector, key: String = "") -> NSMenuItem {
@@ -413,22 +425,14 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    /// The system screenshot crosshair (as with ⌘⇧4): select the QR code, it is decoded and the
-    /// temporary capture deleted at once. Escape cancels. Uses Apple's own screencapture tool,
-    /// so XrayBar never captures the screen itself.
+    /// The system picker (ScreenCaptureKit): click the window or display showing the QR code.
+    /// Consent is per capture; XrayBar needs no Screen Recording permission (D24).
+    private let screenPicker = ScreenPicker()
     @objc private func scanScreen() {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-qr-\(UUID()).png")
-        let capture = Process()
-        capture.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        capture.arguments = ["-i", "-x", file.path]   // interactive selection, no shutter sound
-        capture.terminationHandler = { _ in
-            Task { @MainActor in
-                defer { try? FileManager.default.removeItem(at: file) }
-                guard let image = NSImage(contentsOf: file) else { return }   // cancelled
-                self.importQR(image)
-            }
+        screenPicker.pick { [weak self] image in
+            guard let image else { return }   // cancelled
+            self?.importQR(NSImage(cgImage: image, size: .zero))
         }
-        do { try capture.run() } catch { alert("Screen capture failed", error.localizedDescription) }
     }
 
     private func importQR(_ image: NSImage) {

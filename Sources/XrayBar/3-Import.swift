@@ -1,6 +1,7 @@
 // 3. Import — getting profiles and routing sets in: share links and v2rayN.
 
 import Foundation
+import ScreenCaptureKit
 import SQLite3
 import Vision
 
@@ -135,5 +136,50 @@ enum Import {
             })
         }
         return result
+    }
+}
+
+/// QR codes from the screen through the system's content picker (ScreenCaptureKit, D24):
+/// the user clicks the window or display that shows the code, which is consent for that one
+/// capture. XrayBar never holds a standing Screen Recording permission.
+@MainActor
+final class ScreenPicker: NSObject, SCContentSharingPickerObserver {
+    private var completion: ((CGImage?) -> Void)?
+
+    func pick(_ completion: @escaping (CGImage?) -> Void) {
+        self.completion = completion
+        let picker = SCContentSharingPicker.shared
+        var config = SCContentSharingPickerConfiguration()
+        config.allowedPickerModes = [.singleWindow, .singleDisplay]
+        picker.defaultConfiguration = config
+        picker.add(self)
+        picker.isActive = true
+        picker.present()
+    }
+
+    nonisolated func contentSharingPicker(_ picker: SCContentSharingPicker, didUpdateWith filter: SCContentFilter,
+                                          for stream: SCStream?) {
+        let config = SCStreamConfiguration()
+        config.width = Int(filter.contentRect.width * CGFloat(filter.pointPixelScale))
+        config.height = Int(filter.contentRect.height * CGFloat(filter.pointPixelScale))
+        SCScreenshotManager.captureImage(contentFilter: filter, configuration: config) { image, _ in
+            nonisolated(unsafe) let image = image
+            Task { @MainActor in self.finish(image) }
+        }
+    }
+
+    nonisolated func contentSharingPicker(_ picker: SCContentSharingPicker, didCancelFor stream: SCStream?) {
+        Task { @MainActor in self.finish(nil) }
+    }
+
+    nonisolated func contentSharingPickerStartDidFailWithError(_ error: any Error) {
+        Task { @MainActor in self.finish(nil) }
+    }
+
+    private func finish(_ image: CGImage?) {
+        SCContentSharingPicker.shared.remove(self)
+        SCContentSharingPicker.shared.isActive = false
+        completion?(image)
+        completion = nil
     }
 }

@@ -235,3 +235,24 @@ app quiet (PRINCIPLES 3). A failure can also be the server's; the alert says wha
 → Routing data is updated separately (*Update Routing Data*); xray path and data directory
 are independent settings.
 → Size budget raised from 1200 to 1400 Swift lines for this feature (1264 now).
+
+## D24. Screen QR via the system content picker; menu regrouped; tunnel conflict check (2026-09-21)
+
+`screencapture` run by the bundled app made macOS ask for Screen Recording on every scan:
+TCC binds the grant to the app's designated requirement, which for an ad-hoc signature is the
+build's cdhash, so each rebuild is a new app (and a new grant needs a relaunch). A standing
+permission to record the screen is also a poor look for a VPN app under audit.
+→ *Scan QR Code on Screen…* presents ScreenCaptureKit's `SCContentSharingPicker`: the user
+clicks the window or display showing the code, which is consent for that single
+`SCScreenshotManager` capture. No Screen Recording permission is requested or kept.
+(Replaces D18's screencapture approach. An old XrayBar entry in Privacy & Security › Screen
+Recording can be removed.)
+
+The menu had grown a five-line Xray block with "not yet tested" on every version.
+→ Main menu: status, servers, routing, import/share, then *Xray v… ›* (versions with "works",
+routing data, source, exclusions) and *Diagnostics ›* (log, detailed log, data folder).
+
+Connecting while v2rayN's TUN was on failed deep in the root session with a raw
+"failed to add system route … file exists".
+→ Before asking for the password, Connect checks which interface carries 1.1.1.1; if it is a
+utun that is not ours, it says another VPN/TUN is active and to turn it off.
