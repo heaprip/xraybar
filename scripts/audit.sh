@@ -4,7 +4,7 @@
 set -u
 cd "$(dirname "$0")/.."
 
-SWIFT_BUDGET=1200   # lines in Sources/, excluding blank lines
+SWIFT_BUDGET=1400   # lines in Sources/, excluding blank lines (raised from 1200, D23)
 SHELL_BUDGET=150    # lines in the privileged script, excluding blank lines
 
 section() { printf '\n== %s\n' "$1"; }

@@ -124,6 +124,8 @@ struct IntegrationTests {
 @Suite struct AssetsTests {
     @Test func versionParsingAndMinimum() {
         #expect(Assets.version("Xray 26.9.9 (Xray, Penetrates Everything.) 52a412d") == [26, 9, 9])
+        #expect(Assets.version("v26.10.1") == [26, 10, 1])
+        #expect(Assets.field("SHA2-256=", in: "MD5= aa\nSHA2-256= 2e93\n") == "2e93")
         #expect(Assets.version("Xray 26.3.27 (Xray…)").lexicographicallyPrecedes(Assets.minimumXray))
         #expect(!Assets.version("Xray 26.5.9 (Xray…)").lexicographicallyPrecedes(Assets.minimumXray))
         #expect(!Assets.version("Xray 26.10.1 (Xray…)").lexicographicallyPrecedes(Assets.minimumXray))
@@ -139,18 +141,28 @@ struct IntegrationTests {
     }
 }
 
-/// Opt-in (downloads ~110 MB): `scripts/test.sh --integration`. Installs into a temp directory.
+/// Opt-in (downloads ~130 MB): `scripts/test.sh --integration`. Installs into a temp directory.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["XRAYBAR_INTEGRATION"] != nil))
 struct AssetsDownloadTests {
-    @Test func downloadsAndVerifiesEverything() async throws {
-        let target = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-core-test")
-        defer { try? FileManager.default.removeItem(at: target) }
-        let version = try await Assets.update(dataSource: .runetfreedom, into: target)
-        #expect(Assets.version(version) == [26, 9, 9])
-        for f in ["xray/xray", "geoip.dat", "geosite.dat"] {
-            #expect(FileManager.default.fileExists(atPath: target.appendingPathComponent(f).path), "\(f)")
+    @Test func installsVersionsAndData() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-core-test")
+        try? FileManager.default.removeItem(at: root)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // The tested version (pinned hash) and one other release (.dgst hash).
+        let tested = try await Assets.installXray(Assets.testedXray, in: root)
+        #expect(Assets.version(try Assets.versionLine(ofXray: tested)) == Assets.version(Assets.testedXray))
+        let available = try await Assets.availableXray()
+        #expect(available.contains(Assets.testedXray))
+        let other = try #require(available.first { $0 != Assets.testedXray })
+        _ = try await Assets.installXray(other, in: root)
+        #expect(Set(Assets.installedXray(in: root)) == [Assets.testedXray, other])
+
+        try await Assets.updateData(.runetfreedom, in: root)
+        for f in ["geoip.dat", "geosite.dat"] {
+            #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent(f).path), "\(f)")
+            #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent(f + ".new").path))
         }
-        #expect(!FileManager.default.fileExists(atPath: target.path + ".new"))   // staging removed
     }
 }
 

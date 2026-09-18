@@ -26,9 +26,11 @@ cp -R build/XrayBar.app /Applications/       # и запускайте из /App
 
 Для разработки подойдёт и `swift run`.
 
-Пункт **Update Xray and Routing Data** скачивает официальный релиз Xray и файлы
-`geoip.dat`/`geosite.dat` с проверкой контрольных сумм. До этого используется установка v2rayN
-(`~/Library/Application Support/v2rayN/bin`). Серверы
+**Xray Version ›** скачивает релиз Xray, проверенный с XrayBar, или любой более новый; версии
+хранятся рядом, а первое подключение с новой версией проверяется, и если трафик не проходит,
+вернуться на прежнюю можно в одно нажатие. **Update Routing Data** обновляет
+`geoip.dat`/`geosite.dat`. Всё сверяется по контрольным суммам. До этого используется установка
+v2rayN (`~/Library/Application Support/v2rayN/bin`). Серверы
 импортируются через **Import from Clipboard** (ссылка `vless://…` или картинка с QR-кодом),
 **Scan QR Code on Screen…** (выделите код, как при скриншоте) или **Import from v2rayN…**
 (только чтение). **Share Server…** показывает QR-код. Удерживайте **Option** в меню, чтобы

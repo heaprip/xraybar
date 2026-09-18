@@ -59,7 +59,10 @@ final class MenuBar: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(.sectionHeader(title: "Xray"))
         menu.addItem(disabled(coreStatus))
-        menu.addItem(updating ? disabled("Updating…") : action("Update Xray and Routing Data", #selector(updateAssets)))
+        let versions = NSMenuItem(title: "Xray Version", action: nil, keyEquivalent: "")
+        versions.submenu = xrayVersionsMenu()
+        menu.addItem(versions)
+        menu.addItem(updating ? disabled("Updating…") : action("Update Routing Data", #selector(updateData)))
         let sources = NSMenu()
         for source in Assets.DataSource.allCases {
             let i = action(source.title, #selector(selectDataSource(_:)))
@@ -134,12 +137,34 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
     private var dataSource: Assets.DataSource { library.settings.dataSource ?? .runetfreedom }
 
-    /// "Xray 26.9.9 · runetfreedom (Russia)", or where the xray in use comes from.
+    /// "Xray 26.9.9 · runetfreedom (Russia)": the xray in use and where the routing data comes from.
     private var coreStatus: String {
-        guard library.settings.assetsDir == Assets.dir.path, let version = library.settings.coreVersion else {
-            return "Using Xray from v2rayN"
+        let s = library.settings
+        let xray = s.xrayBinary.map { "Xray " + URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent }
+            ?? "Xray from v2rayN"
+        return xray + " · " + (s.assetsDir == Assets.dir.path ? dataSource.title : "data from v2rayN")
+    }
+
+    /// Installed versions (checkmark on the one in use, whether it has carried traffic yet),
+    /// the version tested with XrayBar if missing, and a check for newer releases.
+    private func xrayVersionsMenu() -> NSMenu {
+        let menu = NSMenu()
+        let s = library.settings
+        var paths = Assets.installedXray().map { ($0, Assets.xrayPath($0)) }
+        if FileManager.default.isExecutableFile(atPath: Settings.v2rayNXray) { paths.append(("v2rayN's Xray", Settings.v2rayNXray)) }
+        for (name, path) in paths {
+            let note = path == s.goodXray ? "works" : "not yet tested"
+            let i = action("\(name) — \(note)", #selector(selectXray(_:)))
+            i.representedObject = path
+            i.state = path == s.xrayPath ? .on : .off
+            menu.addItem(i)
         }
-        return version.split(separator: " ").prefix(2).joined(separator: " ") + " · " + dataSource.title
+        menu.addItem(.separator())
+        if !Assets.installedXray().contains(Assets.testedXray) {
+            menu.addItem(action("Download \(Assets.testedXray) (tested with XrayBar)", #selector(downloadTestedXray)))
+        }
+        menu.addItem(updating ? disabled("Downloading…") : action("Check for Newer Versions…", #selector(checkNewerXray)))
+        return menu
     }
 
     private func action(_ title: String, _ selector: Selector, key: String = "") -> NSMenuItem {
@@ -158,6 +183,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
     private func stateChanged() {
         updateIcon()
+        trialIfNeeded()
         if case .failed(let message) = session.state { alert("Could not connect", message) }
     }
 
@@ -224,18 +250,17 @@ final class MenuBar: NSObject, NSMenuDelegate {
         return a.runModal() == .alertFirstButtonReturn
     }
 
-    /// Downloads and verifies Xray and the routing data (7-Assets), then switches to them.
-    @objc private func updateAssets() {
+    /// Downloads and verifies the routing data (7-Assets), then switches to it.
+    @objc private func updateData() {
         updating = true
         let source = dataSource
         Task {
             do {
-                let version = try await Assets.update(dataSource: source)
+                try await Assets.updateData(source)
                 library.settings.assetsDir = Assets.dir.path
-                library.settings.coreVersion = version
                 save()
                 updating = false
-                alert("Xray updated", "\(coreStatus). Checksums verified. Takes effect on the next Connect.")
+                alert("Routing data updated", "\(source.title). Checksums verified. Takes effect on the next Connect.")
             } catch {
                 updating = false
                 alert("Update failed", error.localizedDescription)
@@ -243,10 +268,87 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
+    // MARK: Xray versions (D23)
+
+    @objc private func selectXray(_ sender: NSMenuItem) {
+        guard let path = sender.representedObject as? String else { return }
+        library.settings.xrayBinary = path == Settings.v2rayNXray ? nil : path
+        saveSelection()
+    }
+
+    @objc private func downloadTestedXray() { install(Assets.testedXray) }
+
+    @objc private func checkNewerXray() {
+        updating = true
+        Task {
+            defer { updating = false }
+            do {
+                let installed = Assets.installedXray()
+                let fresh = try await Assets.availableXray().filter { !installed.contains($0) }
+                guard !fresh.isEmpty else { return alert("No newer versions", "All recent Xray releases are installed.") }
+                let a = Self.newAlert()
+                a.messageText = "Download Xray"
+                a.informativeText = "Releases newer than \(Assets.minimumXray.map(String.init).joined(separator: ".")), "
+                    + "from GitHub (Xray marks them all as pre-releases). Checked against each release's SHA-256. "
+                    + "The first connection with it is a trial: if no traffic passes, you can switch back."
+                let list = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 26))
+                list.addItems(withTitles: fresh)
+                a.accessoryView = list
+                a.addButton(withTitle: "Download and Use")
+                a.addButton(withTitle: "Cancel")
+                NSApp.activate()
+                if a.runModal() == .alertFirstButtonReturn, let tag = list.titleOfSelectedItem { install(tag) }
+            } catch {
+                alert("Could not check for versions", error.localizedDescription)
+            }
+        }
+    }
+
+    private func install(_ tag: String) {
+        updating = true
+        Task {
+            defer { updating = false }
+            do {
+                library.settings.xrayBinary = try await Assets.installXray(tag)
+                save()
+                alert("Xray \(tag) installed", "It is used from the next Connect. The previous version stays installed "
+                      + "and can be chosen again in Xray Version.")
+            } catch {
+                alert("Download failed", error.localizedDescription)
+            }
+        }
+    }
+
+    /// After connecting with an xray that has not carried traffic yet: one request through the
+    /// tunnel. Success marks it as working; failure offers the way back (D23).
+    private func trialIfNeeded() {
+        let s = library.settings
+        guard session.state == .connected, s.xrayPath != s.goodXray else { return }
+        let path = s.xrayPath
+        Task {
+            if await Assets.probe() {
+                library.settings.goodXray = path
+                save()
+            } else if let good = library.settings.goodXray, session.state == .connected {
+                let a = Self.newAlert()
+                a.messageText = "No traffic passes through the tunnel"
+                a.informativeText = "Connected with an Xray version that has not been used before, but a test "
+                    + "request did not get through. Switch back to the version that worked and reconnect?"
+                a.addButton(withTitle: "Switch Back")
+                a.addButton(withTitle: "Keep This Version")
+                NSApp.activate()
+                guard a.runModal() == .alertFirstButtonReturn else { return }
+                library.settings.xrayBinary = good == Settings.v2rayNXray ? nil : good
+                save()
+                session.reconnect(library)
+            }
+        }
+    }
+
     @objc private func selectDataSource(_ sender: NSMenuItem) {
         library.settings.dataSource = (sender.representedObject as? String).flatMap(Assets.DataSource.init)
         save()
-        alert("Routing data source changed", "Choose Update Xray and Routing Data to download it.")
+        alert("Routing data source changed", "Choose Update Routing Data to download it.")
     }
 
     /// Networks the system routes outside the tunnel, e.g. a work network reached by another VPN.

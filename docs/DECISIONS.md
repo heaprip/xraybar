@@ -216,3 +216,22 @@ a same-origin checksum; newer Xray ships with a new XrayBar version after testin
 → Scanning the screen from the bundled app triggers macOS's one-time Screen Recording prompt
 for XrayBar (screencapture runs on its behalf). Alternative with no permission: ⌘⇧⌃4 copies
 a selection to the clipboard, then *Import from Clipboard*.
+
+## D23. User-chosen Xray versions with a trial and a way back (2026-09-21)
+
+The author preferred choosing newer Xray releases over getting only versions blessed by
+XrayBar, and wanted to try one safely and return to a working one (something v2rayN lacks).
+
+→ Versions live side by side in `core/xray/<tag>/xray`; *Xray Version ›* lists them (and
+v2rayN's), with a checkmark on the one in use and "works"/"not yet tested". *Download v26.9.9
+(tested with XrayBar)* keeps the pinned-hash path (D22); *Check for Newer Versions…* lists
+GitHub releases ≥ 26.5.9 (all prereleases) via api.github.com and verifies the chosen one
+against its release `.dgst`.
+→ Trial: after connecting with an xray that has not carried traffic yet, one request to
+`https://cp.cloudflare.com/generate_204` goes through the tunnel (3 tries). 204 marks that
+xray as the known-good one; otherwise an alert offers *Switch Back* (select the last good
+xray, disconnect, connect again). Already-proven versions trigger no request, keeping the
+app quiet (PRINCIPLES 3). A failure can also be the server's; the alert says what was tested.
+→ Routing data is updated separately (*Update Routing Data*); xray path and data directory
+are independent settings.
+→ Size budget raised from 1200 to 1400 Swift lines for this feature (1264 now).

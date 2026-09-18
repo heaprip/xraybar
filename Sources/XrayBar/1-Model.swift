@@ -51,9 +51,14 @@ struct RoutingSet: Codable, Equatable, Identifiable, Sendable {
 }
 
 struct Settings: Codable, Equatable, Sendable {
-    /// Directory with `xray/xray`, `geoip.dat`, `geosite.dat` (D8: v2rayN's by default).
+    /// Directory with `geoip.dat` and `geosite.dat` (D8: v2rayN's until XrayBar downloads its own).
     var assetsDir = NSHomeDirectory() + "/Library/Application Support/v2rayN/bin"
-    var xrayPath: String { assetsDir + "/xray/xray" }
+    static let v2rayNXray = NSHomeDirectory() + "/Library/Application Support/v2rayN/bin/xray/xray"
+    /// The xray to run: a version XrayBar downloaded (7-Assets), else v2rayN's.
+    var xrayBinary: String?
+    var xrayPath: String { xrayBinary ?? Self.v2rayNXray }
+    /// The last xray that carried traffic after connecting; the way back from a failed trial (D23).
+    var goodXray: String?
     /// Resolver for domains routed direct, and for everything else (through the proxy).
     var directDNS = ["77.88.8.8"]
     var remoteDNS = ["https://dns.google/dns-query", "8.8.8.8", "1.1.1.1"]
@@ -65,8 +70,6 @@ struct Settings: Codable, Equatable, Sendable {
     var detailedLog: Bool?
     /// Where geoip.dat/geosite.dat come from when XrayBar downloads its own copy (7-Assets).
     var dataSource: Assets.DataSource?
-    /// Version line of the xray XrayBar downloaded, shown in the menu.
-    var coreVersion: String?
     /// IPv4 addresses/CIDRs routed by the system outside the tunnel (never reach Xray).
     var routeExclusions: [String]?
 }

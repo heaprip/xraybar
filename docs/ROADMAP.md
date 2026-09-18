@@ -17,6 +17,8 @@
 - ✅ QR: show a server as QR (Share Server…); import by scanning an area of the screen or from the clipboard (Vision).
 - ✅ Remove servers and routing sets (hold Option in the menu). No editor windows (decided: not needed).
 - ✅ Own copy of Xray and `.dat` files, downloaded on request, checksum-verified (runetfreedom or Loyalsoldier data).
+- ✅ Several Xray versions side by side; newer releases on request; the first connection with a new
+  version is a trial with one-click switch back to the last working one.
 - ✅ Tunnel exclusions: IPv4 networks routed by the system outside the tunnel (Exclude from Tunnel…).
 - More transports if needed (xhttp, ws, grpc), other protocols only on demand.
 

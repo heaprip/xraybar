@@ -18,6 +18,8 @@ final class Session {
     var onChange: () -> Void = {}
     private var timer: Timer?
     private var connectStarted = Date.distantPast
+    /// Set by `reconnect`: connect again with this library once the old session is gone.
+    private var pendingConnect: Library?
 
     init() {
         if Self.runningPID() != nil { state = .connected }
@@ -55,7 +57,7 @@ final class Session {
             throw NSError(domain: "XrayBar", code: 4, userInfo: [NSLocalizedDescriptionKey:
                 "\(line.split(separator: " ").prefix(2).joined(separator: " ")) is too old for native TUN on macOS "
                 + "(needs \(Assets.minimumXray.map(String.init).joined(separator: ".")) or newer). "
-                + "Choose Update Xray and Routing Data."])
+                + "Choose one in Xray Version."])
         }
 
         let file = Store.dir.appendingPathComponent("config.test.json")
@@ -124,6 +126,12 @@ final class Session {
         }
     }
 
+    /// Disconnect, then connect with the new settings (a new administrator prompt).
+    func reconnect(_ library: Library) {
+        pendingConnect = library
+        disconnect()
+    }
+
     // MARK: Disconnect
 
     func disconnect() {
@@ -164,6 +172,7 @@ final class Session {
         case .disconnecting where !running:
             try? FileManager.default.removeItem(at: Store.stopFile)
             set(.disconnected)
+            if let library = pendingConnect { pendingConnect = nil; connect(library) }
         case .disconnecting where Self.needsRestore:
             fail("The session stopped responding. Use Restore Network Settings in the menu.")
         case .disconnected where running, .failed where running:
