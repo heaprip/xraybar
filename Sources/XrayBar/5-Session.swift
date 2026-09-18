@@ -47,8 +47,17 @@ final class Session {
         }
     }
 
-    /// `xray run -test` on the config (with TUN swapped out: creating a utun needs root).
+    /// Xray new enough for native TUN routing, and `xray run -test` on the config (with TUN
+    /// swapped out: creating a utun needs root).
     private func validate(_ config: XrayConfig.JSON, settings: Settings) throws {
+        let line = try Assets.versionLine(ofXray: settings.xrayPath)
+        guard Assets.version(line).lexicographicallyPrecedes(Assets.minimumXray) == false else {
+            throw NSError(domain: "XrayBar", code: 4, userInfo: [NSLocalizedDescriptionKey:
+                "\(line.split(separator: " ").prefix(2).joined(separator: " ")) is too old for native TUN on macOS "
+                + "(needs \(Assets.minimumXray.map(String.init).joined(separator: ".")) or newer). "
+                + "Choose Update Xray and Routing Data."])
+        }
+
         let file = Store.dir.appendingPathComponent("config.test.json")
         try Store.write(XrayConfig.data(config), to: file)
         defer { try? FileManager.default.removeItem(at: file) }

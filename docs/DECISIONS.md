@@ -198,3 +198,21 @@ generated config would still hold the same credentials in plain text while conne
 → Keychain moves with the signed helper in stage 3. Meanwhile the user-side `config.json` is
 deleted as soon as the root session runs (it uses its own root-only copy, itself deleted when
 the session ends); `library.json` stays mode 0600.
+
+## D22. Pin the tested Xray release and its hash; refuse Xray too old for TUN (2026-09-21)
+
+Since 26.5 every Xray release is marked *pre*release on GitHub, so `releases/latest` served
+26.3.27 (March). That version has no `autoSystemRoutingTable`/`autoOutboundsInterface`; Xray
+ignores unknown fields, so it brought up a utun no traffic entered, while the session had
+already pointed DNS at the tunnel: no connectivity (reported by the author).
+
+→ `7-Assets.swift` pins v26.9.9 and the SHA-256 of its zip per CPU. The hash was cross-checked
+three ways: the release's `.dgst`, an independent download, and the unpacked binary is
+byte-identical to the xray in v2rayN 7.25.2. A pinned hash in audited source is stronger than
+a same-origin checksum; newer Xray ships with a new XrayBar version after testing.
+→ Connect refuses Xray older than 26.5.9 with an explanation (`Assets.minimumXray`).
+→ The root session no longer changes DNS if Xray installed no routes within 10 s; it fails.
+→ Alerts set their icon explicitly (bundled apps otherwise show the empty bundle icon).
+→ Scanning the screen from the bundled app triggers macOS's one-time Screen Recording prompt
+for XrayBar (screencapture runs on its behalf). Alternative with no permission: ⌘⇧⌃4 copies
+a selection to the clipboard, then *Import from Clipboard*.

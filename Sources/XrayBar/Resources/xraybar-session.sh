@@ -128,12 +128,15 @@ XRAY_LOCATION_ASSET=$ASSETS "$XRAY" run -c "$RUN/config.json" >>"$LOG" 2>&1 &
 XPID=$!
 echo "$XPID" >"$PIDFILE"; chmod 644 "$PIDFILE"
 
-# Wait until Xray has installed its routes (the tunnel is up) before touching DNS.
+# Wait until Xray has installed its routes (the tunnel is up) before touching DNS. Without
+# them no traffic enters the tunnel; pointing DNS at it then would only break name lookups.
+routed=
 for _ in $(seq 1 20); do
     kill -0 "$XPID" 2>/dev/null || fail "xray exited during startup"
-    route -n get 1.1.1.1 2>/dev/null | grep -q 'interface: utun' && break
+    route -n get 1.1.1.1 2>/dev/null | grep -q 'interface: utun' && { routed=1; break; }
     sleep 0.5
 done
+[[ -n $routed ]] || fail "xray started but installed no routes (too old for native TUN on macOS?)"
 set_dns
 
 while kill -0 "$XPID" 2>/dev/null && kill -0 "$APP_PID" 2>/dev/null && [[ ! -e $STOP ]]; do

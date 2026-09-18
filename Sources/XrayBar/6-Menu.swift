@@ -178,7 +178,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
     /// A previous session ended without cleaning up (power loss, crash of the root script).
     private func offerRestore() {
         NSApp.activate()
-        let a = NSAlert()
+        let a = Self.newAlert()
         a.messageText = "XrayBar did not shut down cleanly"
         a.informativeText = "Network settings from the last connection are still in place "
             + "(DNS, or Xray still running). Restore them now? You will be asked for your password."
@@ -216,7 +216,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
     /// Removing the selected item selects the first remaining one on the next Connect.
     private func confirmRemove(_ name: String) -> Bool {
         NSApp.activate()
-        let a = NSAlert()
+        let a = Self.newAlert()
         a.messageText = "Remove “\(name)”?"
         a.informativeText = "This cannot be undone. A running connection is not affected."
         a.addButton(withTitle: "Remove").hasDestructiveAction = true
@@ -252,7 +252,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
     /// Networks the system routes outside the tunnel, e.g. a work network reached by another VPN.
     @objc private func editExclusions() {
         NSApp.activate()
-        let a = NSAlert()
+        let a = Self.newAlert()
         a.messageText = "Exclude from Tunnel"
         a.informativeText = "IPv4 addresses or networks, separated by commas, that bypass Xray entirely "
             + "(unlike “direct” rules, which still pass through it). Example: 10.8.0.0/16, 203.0.113.7"
@@ -367,7 +367,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         guard let profile = library.profile else { return }
         let link = Import.link(for: profile)
         NSApp.activate()
-        let a = NSAlert()
+        let a = Self.newAlert()
         a.messageText = profile.name
         a.informativeText = "Scan with another device. The code contains the server's credentials."
         a.accessoryView = NSImageView(image: Self.qrImage(link, size: 240))
@@ -378,6 +378,13 @@ final class MenuBar: NSObject, NSMenuDelegate {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(link, forType: .string)
         }
+    }
+
+    /// Bundled apps get their alert icon from the bundle; set it explicitly (no .icns yet).
+    static func newAlert() -> NSAlert {
+        let a = NSAlert()
+        a.icon = NSApp.applicationIconImage
+        return a
     }
 
     static func qrImage(_ text: String, size: CGFloat) -> NSImage {
@@ -415,7 +422,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
     private func alert(_ title: String, _ text: String) {
         NSApp.activate()
-        let a = NSAlert()
+        let a = Self.newAlert()
         a.messageText = title
         a.informativeText = text
         a.runModal()

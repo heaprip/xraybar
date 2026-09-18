@@ -20,7 +20,7 @@ Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modif
 |---|---|---|
 | Root | One admin prompt per Connect runs `xraybar-session.sh`, nothing else | `Sources/XrayBar/Resources/xraybar-session.sh` |
 | As root | copies the config to `/var/run/xraybar`, starts xray, sets DNS, waits, stops xray, restores DNS; `--restore` cleans up after a session that died | same script |
-| Network (app) | only when you choose *Update Xray and Routing Data*: the Xray release and the chosen `.dat` source on GitHub, each file SHA-256-verified against its upstream checksum before use; ephemeral session, no cookies or cache | `7-Assets.swift` |
+| Network (app) | only when you choose *Update Xray and Routing Data*: a tested Xray release whose SHA-256 is pinned in the source, and the chosen `.dat` source on GitHub, verified against its published SHA-256 before use; ephemeral session, no cookies or cache | `7-Assets.swift` |
 | Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file, `core/` with the downloaded Xray and `.dat`); `/var/run/xraybar/` (root: config copy while connected, pids; `/var/db/xraybar/dns.saved` survives reboots; log readable by admin users only, errors only unless Detailed Log is on) | `2-Store.swift`, script |
 | Files read | the above; optionally v2rayN's database for one-time import (read-only); the clipboard or a screen area only when you choose an import command (QR decoded on-device by Vision) | `3-Import.swift`, `6-Menu.swift` |
 | Processes | the admin prompt (`NSAppleScript`), `xray run -test` for validation; `ditto` to unzip and `xray version` after a download; Apple's `screencapture -i` when you choose *Scan QR Code on Screen…* (you select the area; the capture is deleted after decoding) | `5-Session.swift`, `6-Menu.swift`, `7-Assets.swift` |
@@ -44,8 +44,9 @@ Does not protect against (known limitations, stage 1):
   "ask for password, then run a tool from my home folder" design, including v2rayN
   (which additionally pipes your sudo password through stdin). Stage 3 moves the
   privileged part into a root-owned LaunchDaemon, which closes this gap.
-- A compromised Xray-core release upstream. Checksums prove you got what XTLS published,
-  not that it is benign. You can build Xray from source with Go and compare.
+- A compromised Xray-core release upstream. The pinned hash proves you got exactly the
+  release that was tested, not that it is benign. You can build Xray from source with Go
+  and compare. Routing data is checked only against its same-origin checksum.
 - Traffic analysis or anything outside Xray's own security properties.
 
 ## About the app bundle

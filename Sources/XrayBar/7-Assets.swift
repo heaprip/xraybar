@@ -1,10 +1,11 @@
 // 7. Assets — XrayBar's own copy of Xray and the routing data (geoip.dat, geosite.dat).
 //
 // This is the ONLY code in the app that uses the network, and it runs only when the user
-// picks "Update Xray and Routing Data…". Every file is checked against the SHA-256 its
-// upstream project publishes before it is used; nothing is swapped in unless all files pass.
-// The checksums come from the same GitHub release as the files: they prove the download is
-// complete and unaltered in transit, not that the upstream release itself is benign.
+// picks "Update Xray and Routing Data". Nothing is swapped in unless every file passes its check:
+// - Xray: a tested release whose SHA-256 is pinned right here, so the binary's hash is part of
+//   the source you audit (D22). Newer Xray arrives with a new XrayBar version, after testing.
+// - Routing data (rebuilt daily upstream): the SHA-256 published next to each file. That proves
+//   the download is complete and unaltered in transit, not that the upstream data is benign.
 
 import CryptoKit
 import Foundation
@@ -30,10 +31,19 @@ enum Assets {
         }
     }
 
+    /// Oldest Xray with native TUN routing on macOS (`autoSystemRoutingTable`); older releases
+    /// ignore those fields and bring up a tunnel no traffic enters.
+    static let minimumXray = [26, 5, 9]
+
+    // Since 26.5 every Xray release is a GitHub *pre*release, so "latest" means 26.3.27, which is
+    // too old. Pin the tested one. Hashes cross-checked: .dgst files, own download, and the xray
+    // binary is byte-identical to the one shipped in v2rayN 7.25.2.
     #if arch(arm64)
-    static let xrayZip = "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-macos-arm64-v8a.zip"
+    static let xrayZip = "https://github.com/XTLS/Xray-core/releases/download/v26.9.9/Xray-macos-arm64-v8a.zip"
+    static let xrayZipSHA256 = "b7cf765d60ccc703853d4218c49a1eacc5bca764543b9540bdeaf45c951afc7d"
     #else
-    static let xrayZip = "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-macos-64.zip"
+    static let xrayZip = "https://github.com/XTLS/Xray-core/releases/download/v26.9.9/Xray-macos-64.zip"
+    static let xrayZipSHA256 = "32b5d106b9936f3ae2044cd283d9e22749b57fd30b34a58792b86c90018bb5e4"
     #endif
 
     /// No cookies, no cache, nothing persisted by URLSession.
@@ -48,9 +58,9 @@ enum Assets {
         try fm.createDirectory(at: staging.appendingPathComponent("xray"), withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: staging) }
 
-        // Xray: zip + "SHA2-256= <hex>" line in the .dgst file next to it.
+        // Xray: the pinned release, checked against the pinned hash.
         let zip = try await download(xrayZip, to: staging.appendingPathComponent("xray.zip"))
-        try verify(zip, expected: field("SHA2-256=", in: try await text(xrayZip + ".dgst")))
+        try verify(zip, expected: xrayZipSHA256)
         let unpacked = staging.appendingPathComponent("unpacked")
         try run("/usr/bin/ditto", ["-x", "-k", zip.path, unpacked.path])
         let xray = staging.appendingPathComponent("xray/xray")
@@ -66,7 +76,7 @@ enum Assets {
             try verify(file, expected: String(try await text(url + ".sha256sum").prefix { !$0.isWhitespace }))
         }
 
-        let version = try run(xray.path, ["version"]).split(separator: "\n").first.map(String.init) ?? "Xray"
+        let version = try versionLine(ofXray: xray.path)
         if fm.fileExists(atPath: target.path) {
             _ = try fm.replaceItemAt(target, withItemAt: staging)
         } else {
@@ -110,9 +120,13 @@ enum Assets {
         guard code == 200 else { throw failure("\(URL(string: url)?.lastPathComponent ?? url): HTTP \(code)") }
     }
 
-    static func field(_ key: String, in text: String) -> String {
-        text.split(separator: "\n").first { $0.hasPrefix(key) }
-            .map { $0.dropFirst(key.count).trimmingCharacters(in: .whitespaces) } ?? ""
+    /// [26, 9, 9] from "Xray 26.9.9 (Xray, Penetrates Everything.) …".
+    static func version(_ versionLine: String) -> [Int] {
+        versionLine.split(separator: " ").dropFirst().first?.split(separator: ".").compactMap { Int($0) } ?? []
+    }
+
+    static func versionLine(ofXray path: String) throws -> String {
+        try run(path, ["version"]).split(separator: "\n").first.map(String.init) ?? ""
     }
 
     static func verify(_ file: URL, expected: String) throws {

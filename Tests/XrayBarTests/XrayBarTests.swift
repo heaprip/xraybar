@@ -122,10 +122,11 @@ struct IntegrationTests {
 }
 
 @Suite struct AssetsTests {
-    @Test func dgstField() {
-        let dgst = "MD5= aa\nSHA1= bb\nSHA2-256= 2e93a67e\nSHA2-512= cc\n"
-        #expect(Assets.field("SHA2-256=", in: dgst) == "2e93a67e")
-        #expect(Assets.field("SHA3=", in: dgst) == "")
+    @Test func versionParsingAndMinimum() {
+        #expect(Assets.version("Xray 26.9.9 (Xray, Penetrates Everything.) 52a412d") == [26, 9, 9])
+        #expect(Assets.version("Xray 26.3.27 (Xray…)").lexicographicallyPrecedes(Assets.minimumXray))
+        #expect(!Assets.version("Xray 26.5.9 (Xray…)").lexicographicallyPrecedes(Assets.minimumXray))
+        #expect(!Assets.version("Xray 26.10.1 (Xray…)").lexicographicallyPrecedes(Assets.minimumXray))
     }
 
     @Test func checksumMismatchIsRejected() throws {
@@ -145,7 +146,7 @@ struct AssetsDownloadTests {
         let target = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-core-test")
         defer { try? FileManager.default.removeItem(at: target) }
         let version = try await Assets.update(dataSource: .runetfreedom, into: target)
-        #expect(version.hasPrefix("Xray "))
+        #expect(Assets.version(version) == [26, 9, 9])
         for f in ["xray/xray", "geoip.dat", "geosite.dat"] {
             #expect(FileManager.default.fileExists(atPath: target.appendingPathComponent(f).path), "\(f)")
         }
