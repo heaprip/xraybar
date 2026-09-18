@@ -256,3 +256,12 @@ Connecting while v2rayN's TUN was on failed deep in the root session with a raw
 "failed to add system route … file exists".
 → Before asking for the password, Connect checks which interface carries 1.1.1.1; if it is a
 utun that is not ours, it says another VPN/TUN is active and to turn it off.
+
+## D25. App icon drawn from source at build time (2026-09-21)
+
+Without an .icns the bundle showed a blank placeholder in Spotlight and Finder. A committed
+.icns would be an opaque binary in a repository meant to be read.
+→ `scripts/make-icon.swift` draws the icon (white `shield.fill` on a blue rounded square on
+Apple's icon grid) into an .iconset; `make-app.sh` runs it and `iconutil` builds AppIcon.icns.
+→ Imports now name what was recognized, including servers that were already in the list, so a
+QR scan of an existing server visibly succeeds.

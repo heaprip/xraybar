@@ -14,6 +14,11 @@ cp Support/Info.plist "$app/Contents/Info.plist"
 cp "$bin/XrayBar" "$app/Contents/MacOS/XrayBar"
 # SwiftPM looks for the resource bundle (the session script) in Contents/Resources.
 cp -R "$bin/XrayBar_XrayBar.bundle" "$app/Contents/Resources/"
+# The icon is drawn from source at build time (no binary images in the repository).
+iconset=$(mktemp -d)/AppIcon.iconset
+swift scripts/make-icon.swift "$iconset"
+iconutil -c icns "$iconset" -o "$app/Contents/Resources/AppIcon.icns"
+rm -rf "$(dirname "$iconset")"
 
 # Ad-hoc signature: seals the bundle so any later change to it (including the root script)
 # is detectable with `codesign --verify`. Not a Developer ID; see docs/SECURITY.md.

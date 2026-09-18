@@ -111,6 +111,7 @@ enum Import {
     }
 
     /// Adds imported items, skipping ones already present (same server and user / same name and rules).
+    @discardableResult
     static func merge(_ imported: (profiles: [Profile], routing: [RoutingSet]), into library: inout Library) -> Int {
         var added = 0
         for p in imported.profiles where !library.profiles.contains(where: {
@@ -163,7 +164,6 @@ final class ScreenPicker: NSObject, SCContentSharingPickerObserver {
         config.width = Int(filter.contentRect.width * CGFloat(filter.pointPixelScale))
         config.height = Int(filter.contentRect.height * CGFloat(filter.pointPixelScale))
         SCScreenshotManager.captureImage(contentFilter: filter, configuration: config) { image, _ in
-            nonisolated(unsafe) let image = image
             Task { @MainActor in self.finish(image) }
         }
     }

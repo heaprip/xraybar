@@ -447,10 +447,15 @@ final class MenuBar: NSObject, NSMenuDelegate {
         do {
             let profiles = try links.map(Import.profile(fromLink:))
             guard !profiles.isEmpty else { return alert("Nothing to import", "Copy a vless:// link first.") }
-            let added = Import.merge((profiles, []), into: &library)
+            let known = profiles.filter { p in library.profiles.contains { $0.address == p.address && $0.port == p.port && $0.uuid == p.uuid } }
+            Import.merge((profiles, []), into: &library)
             if library.selectedProfile == nil { library.selectedProfile = profiles.first?.id }
             save()
-            alert("Imported", "\(added) new server(s).")
+            // Name what was recognized, so a scan of an existing server still shows it worked.
+            let new = profiles.filter { p in !known.contains { $0.uuid == p.uuid && $0.address == p.address } }
+            alert(new.isEmpty ? "Already in your servers" : "Server added",
+                  (new + known).map { "\($0.name) — \($0.address):\($0.port)" + (new.contains($0) ? "" : " (already added)") }
+                      .joined(separator: "\n"))
         } catch {
             alert("Import failed", error.localizedDescription)
         }
@@ -486,7 +491,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    /// Bundled apps get their alert icon from the bundle; set it explicitly (no .icns yet).
+    /// The app icon, set explicitly: the bundle's icon, or the SF Symbol when run unbundled.
     static func newAlert() -> NSAlert {
         let a = NSAlert()
         a.icon = NSApp.applicationIconImage
