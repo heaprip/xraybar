@@ -164,22 +164,23 @@ final class ScreenPicker: NSObject, SCContentSharingPickerObserver {
         config.width = Int(filter.contentRect.width * CGFloat(filter.pointPixelScale))
         config.height = Int(filter.contentRect.height * CGFloat(filter.pointPixelScale))
         SCScreenshotManager.captureImage(contentFilter: filter, configuration: config) { image, _ in
-            Task { @MainActor in self.finish(image) }
+            Task { @MainActor in self.finish(image, cancelled: false) }
         }
     }
 
     nonisolated func contentSharingPicker(_ picker: SCContentSharingPicker, didCancelFor stream: SCStream?) {
-        Task { @MainActor in self.finish(nil) }
+        Task { @MainActor in self.finish(nil, cancelled: true) }
     }
 
-    nonisolated func contentSharingPickerStartDidFailWithError(_ error: any Error) {
-        Task { @MainActor in self.finish(nil) }
-    }
+    /// macOS 26 also reports this when the app has no standing Screen Recording permission,
+    /// while the picker stays up and works; only a selection or a cancel ends the scan.
+    nonisolated func contentSharingPickerStartDidFailWithError(_ error: any Error) {}
 
-    private func finish(_ image: CGImage?) {
+    /// The completion gets the capture, or nil if capturing failed; a cancel just ends quietly.
+    private func finish(_ image: CGImage?, cancelled: Bool) {
         SCContentSharingPicker.shared.remove(self)
         SCContentSharingPicker.shared.isActive = false
-        completion?(image)
+        if !cancelled { completion?(image) }
         completion = nil
     }
 }

@@ -430,7 +430,10 @@ final class MenuBar: NSObject, NSMenuDelegate {
     private let screenPicker = ScreenPicker()
     @objc private func scanScreen() {
         screenPicker.pick { [weak self] image in
-            guard let image else { return }   // cancelled
+            guard let image else {
+                return self?.alert("Could not capture the window", "Try again, or press ⌘⇧⌃4, select the QR code "
+                                   + "and choose Import from Clipboard.") ?? ()
+            }
             self?.importQR(NSImage(cgImage: image, size: .zero))
         }
     }

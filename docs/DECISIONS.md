@@ -265,3 +265,17 @@ Without an .icns the bundle showed a blank placeholder in Spotlight and Finder. 
 Apple's icon grid) into an .iconset; `make-app.sh` runs it and `iconutil` builds AppIcon.icns.
 → Imports now name what was recognized, including servers that were already in the list, so a
 QR scan of an existing server visibly succeeds.
+
+## D26. Correction to D24: the picker works, but macOS still shows its prompt (2026-09-21)
+
+Observed on macOS 26 (system log, replayd/tccd): presenting `SCContentSharingPicker` from an
+app without the standing permission makes TCC show its "would like to record this computer's
+screen" notice and report a picker start failure, yet the picker stays up and the capture of
+the chosen window is allowed through the picker filter (`TCC Allow … contentPickerFilter`,
+screenshot created). XrayBar treated the start failure as the end of the scan and dropped the
+capture, so scans silently did nothing.
+
+→ Only a selection or a cancel ends a scan; the start-failure callback is ignored. A failed
+capture now says so and points to ⌘⇧⌃4 + Import from Clipboard.
+→ The prompt can be dismissed with *Deny*; the permission is not needed and should stay off.
+D24's "no prompt" statement was wrong.
