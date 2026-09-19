@@ -279,3 +279,14 @@ capture, so scans silently did nothing.
 capture now says so and points to ⌘⇧⌃4 + Import from Clipboard.
 → The prompt can be dismissed with *Deny*; the permission is not needed and should stay off.
 D24's "no prompt" statement was wrong.
+
+## D27. No screen capture in XrayBar at all (2026-09-21)
+
+Even with the system picker (D24, D26), macOS 26 showed two system prompts per scan ("would
+like to record…", "requesting to bypass the system private window picker…"), and the capture
+failed unless the standing permission was granted, which a VPN app should not hold.
+→ Screen scanning is removed; ScreenCaptureKit is no longer linked. QR import goes through the
+clipboard: ⌘⇧⌃4 (Apple's screenshot tool, run by the user) puts the selection on the
+clipboard, and *Import Link or QR Code from Clipboard* accepts that image or a vless:// link.
+The menu title and the "nothing to import" message say both work. `audit.sh` expects no
+screen-capture APIs.

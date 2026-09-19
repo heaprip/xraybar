@@ -57,8 +57,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
                    #selector(selectRouting(_:)), remove: #selector(removeRouting(_:)))
 
         menu.addItem(.separator())
-        menu.addItem(action("Import from Clipboard", #selector(importClipboard)))
-        menu.addItem(action("Scan QR Code on Screen…", #selector(scanScreen)))
+        menu.addItem(action("Import Link or QR Code from Clipboard", #selector(importClipboard)))
         menu.addItem(action("Import from v2rayN…", #selector(importV2rayN)))
         if library.profile != nil { menu.addItem(action("Share Server…", #selector(shareServer))) }
 
@@ -413,7 +412,8 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    /// A copied vless:// link (one per line), or a copied image containing QR codes.
+    /// A copied vless:// link (one per line), or a copied image containing QR codes, e.g. a
+    /// screenshot taken with ⌘⇧⌃4 (the system tool; XrayBar never captures the screen, D27).
     @objc private func importClipboard() {
         let pasteboard = NSPasteboard.general
         if let text = pasteboard.string(forType: .string) {
@@ -421,27 +421,16 @@ final class MenuBar: NSObject, NSMenuDelegate {
         } else if let image = NSImage(pasteboard: pasteboard) {
             importQR(image)
         } else {
-            alert("Nothing to import", "Copy a vless:// link or an image with a QR code first.")
-        }
-    }
-
-    /// The system picker (ScreenCaptureKit): click the window or display showing the QR code.
-    /// Consent is per capture; XrayBar needs no Screen Recording permission (D24).
-    private let screenPicker = ScreenPicker()
-    @objc private func scanScreen() {
-        screenPicker.pick { [weak self] image in
-            guard let image else {
-                return self?.alert("Could not capture the window", "Try again, or press ⌘⇧⌃4, select the QR code "
-                                   + "and choose Import from Clipboard.") ?? ()
-            }
-            self?.importQR(NSImage(cgImage: image, size: .zero))
+            alert("Nothing to import", "Copy a vless:// link, or press ⌘⇧⌃4 and select a QR code on the "
+                  + "screen (it goes to the clipboard), then choose this again.")
         }
     }
 
     private func importQR(_ image: NSImage) {
         guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
               let codes = try? Import.qrCodes(in: cg), !codes.isEmpty
-        else { return alert("No QR code found", "The image does not contain a readable QR code.") }
+        else { return alert("No QR code found", "The copied image has no readable QR code. With ⌘⇧⌃4, "
+                            + "select an area that includes the whole code.") }
         importLinks(codes)
     }
 

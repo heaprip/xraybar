@@ -31,9 +31,8 @@ cp -R build/XrayBar.app /Applications/       # и запускайте из /App
 вернуться на прежнюю можно в одно нажатие. **Update Routing Data** обновляет
 `geoip.dat`/`geosite.dat`. Всё сверяется по контрольным суммам. До этого используется установка
 v2rayN (`~/Library/Application Support/v2rayN/bin`). Серверы
-импортируются через **Import from Clipboard** (ссылка `vless://…` или картинка с QR-кодом),
-**Scan QR Code on Screen…** (кликните по окну с кодом) или **Import from v2rayN…**
-(только чтение). **Share Server…** показывает QR-код. Удерживайте **Option** в меню, чтобы
+импортируются через **Import Link or QR Code from Clipboard** (скопируйте ссылку `vless://…` или нажмите ⌘⇧⌃4 и
+выделите QR-код — снимок попадёт в буфер обмена) или **Import from v2rayN…** (только чтение). **Share Server…** показывает QR-код. Удерживайте **Option** в меню, чтобы
 удалить сервер или набор правил.
 
 При подключении запрашивается пароль администратора: для создания TUN-интерфейса нужен root.

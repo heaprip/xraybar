@@ -33,7 +33,7 @@ find_code 'Process\(\)|posix_spawn|NSTask|system\(|popen|executableURL'
 section "Networking (expected: only 7-Assets.swift, run when the user asks)"
 find_code 'URLSession|NSURLConnection|import Network|CFSocket|socket\(|/dev/tcp|curl |wget '
 
-section "Screen capture (expected: only the system picker, per-use consent)"
+section "Screen capture (expected: none)"
 find_code 'ScreenCaptureKit|SCScreenshotManager|SCStream\(|screencapture|CGWindowListCreateImage|CGDisplayCreateImage'
 
 section "Hard-coded URLs and hosts"
