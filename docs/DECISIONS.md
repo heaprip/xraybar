@@ -314,3 +314,20 @@ session script. The app compares the SHA-256 of its bundled helper and script wi
 installed copies and offers *Update Helper…* when they differ. Without the helper everything
 works as before (admin prompt per Connect).
 → Still from user space: the xray binary and the config (validated by the script as before).
+
+## D29. A panel instead of a menu (2026-09-21)
+
+An NSMenu closes after every click; the author wanted to pick a server and a routing set in
+one go, closing only by clicking outside or on the icon, like the Wi-Fi and Control Center
+panels.
+→ The UI is a `MenuBarExtra` with `.menuBarExtraStyle(.window)` (App.swift, 8-Panel.swift):
+header with a Connect switch and status; Server and Routing choices with checkmarks (up to four
+inline, the rest in an "Other …" pop-up; right-click to remove); a footer with the Xray version
+and a "⋯" menu for everything else (import, share, Xray versions and data, exclusions,
+diagnostics, helper, Open at Login, Quit). The old menu controller became `AppModel`
+(6-Actions.swift), observable, with the same actions.
+→ Changing server/routing while connected shows "Changes apply after reconnecting — Reconnect"
+in the panel instead of an alert.
+→ No `@State`: in the macOS 27 SDK it is a macro whose plugin the Command Line Tools lack, so
+the App holds the model as a constant and row hover lives in the model.
+→ App size budget 1400 → 1500 (1443 now).

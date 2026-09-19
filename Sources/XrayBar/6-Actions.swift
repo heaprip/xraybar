@@ -1,114 +1,34 @@
-// 6. Menu — the whole UI: one status item and its menu, laid out like the system's own
-// menu extras (Wi-Fi, VPN): status on top, choices inline with checkmarks, actions below.
+// 6. Actions — what the UI can do: connect, choose, import, manage Xray and the helper.
+// The panel (8-Panel.swift) only shows this model's state and calls these methods.
 
 import AppKit
 import CoreImage.CIFilterBuiltins
+import Observation
 import ServiceManagement
 
 @MainActor
-final class MenuBar: NSObject, NSMenuDelegate {
-    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    private let session = Session()
-    private var library = Store.load()
-    private var updating = false
+@Observable
+final class AppModel {
+    private(set) var library = Store.load()
+    private(set) var state: Session.State = .disconnected
+    private(set) var updating = false
+    /// A server or routing change while connected: shown in the panel with a Reconnect button.
+    private(set) var changedWhileConnected = false
+    /// Bumped after actions that change things the panel reads from disk (helper, versions).
+    private(set) var tick = 0
+    /// The panel row under the pointer (kept here: the panel has no @State, see App.swift).
+    var hovered: UUID?
+    @ObservationIgnored let session = Session()
 
-    override init() {
-        super.init()
-        item.menu = NSMenu()
-        item.menu?.delegate = self
+    init() {
+        state = session.state
         session.onChange = { [weak self] in self?.stateChanged() }
-        updateIcon()
-        if Session.needsRestore { offerRestore() }
+        if Session.needsRestore { DispatchQueue.main.async { self.offerRestore() } }
     }
 
-    // MARK: Building the menu (rebuilt every time it opens)
-
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-
-        menu.addItem(disabled(statusText))
-        if Session.needsRestore {
-            menu.addItem(action("Restore Network Settings…", #selector(restore)))
-        }
-        switch session.state {
-        case .connected, .connecting:
-            menu.addItem(action("Disconnect", #selector(disconnect)))
-        case .disconnecting:
-            menu.addItem(disabled("Disconnect"))
-        case .disconnected, .failed:
-            menu.addItem(action("Connect", #selector(connect)))
-        }
-
-        menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Server"))
-        if library.profiles.isEmpty { menu.addItem(disabled("No servers — import one below")) }
-        let servers = library.profiles.map { p in
-            (p.id, p.name, p.name + "  " + p.address)   // the address tells same-named servers apart
-        }
-        addChoices(servers, selected: library.profile?.id, more: "Other Servers", to: menu,
-                   #selector(selectProfile(_:)), remove: #selector(removeProfile(_:)))
-
-        menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Routing"))
-        let routing = library.routingSets.map { r in
-            (r.id, r.name, r.name + "  (\(r.rules.count) rules)")
-        }
-        addChoices(routing, selected: library.routing.id, more: "Other Routing Sets", to: menu,
-                   #selector(selectRouting(_:)), remove: #selector(removeRouting(_:)))
-
-        menu.addItem(.separator())
-        menu.addItem(action("Import Link or QR Code from Clipboard", #selector(importClipboard)))
-        menu.addItem(action("Import from v2rayN…", #selector(importV2rayN)))
-        if library.profile != nil { menu.addItem(action("Share Server…", #selector(shareServer))) }
-
-        menu.addItem(.separator())
-        menu.addItem(submenu(xrayTitle, xrayMenu()))
-        menu.addItem(submenu("Diagnostics", diagnosticsMenu()))
-        if !Helper.installed {
-            menu.addItem(action("Use Touch ID to Connect…", #selector(installHelper)))
-        } else if Helper.outdated {
-            menu.addItem(action("Update Helper…", #selector(installHelper)))
-        }
-        if Bundle.main.bundlePath.hasSuffix(".app") {   // login items need an app bundle
-            let login = action("Open at Login", #selector(toggleOpenAtLogin))
-            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-            menu.addItem(login)
-        }
-        menu.addItem(.separator())
-        menu.addItem(action("Quit XrayBar", #selector(quit), key: "q"))
-    }
-
-    /// Choices with a checkmark on the selected one, like the Wi-Fi menu: up to four inline;
-    /// beyond that only the selected one inline and the rest in a submenu. A name that occurs
-    /// more than once is shown with its detail (address or rule count) to tell them apart.
-    /// Holding Option turns every choice into "Remove …" (the standard alternate-item pattern).
-    private func addChoices(_ items: [(id: UUID, name: String, detailed: String)], selected: UUID?,
-                            more: String, to menu: NSMenu, _ selector: Selector, remove: Selector) {
-        let names = Dictionary(grouping: items, by: \.name)
-        func add(_ c: (id: UUID, name: String, detailed: String), to menu: NSMenu) {
-            let title = names[c.name]!.count > 1 ? c.detailed : c.name
-            let i = action(title, selector)
-            i.representedObject = c.id
-            i.state = c.id == selected ? .on : .off
-            menu.addItem(i)
-            let alt = action("Remove “\(title)”…", remove)
-            alt.representedObject = c.id
-            alt.isAlternate = true
-            alt.keyEquivalentModifierMask = .option
-            menu.addItem(alt)
-        }
-        guard items.count > 4 else { return items.forEach { add($0, to: menu) } }
-        items.filter { $0.id == selected }.forEach { add($0, to: menu) }
-        let submenu = NSMenu()
-        items.filter { $0.id != selected }.forEach { add($0, to: submenu) }
-        let other = NSMenuItem(title: more, action: nil, keyEquivalent: "")
-        other.submenu = submenu
-        menu.addItem(other)
-    }
-
-    private var statusText: String {
+    var statusText: String {
         let name = library.profile?.name ?? ""
-        switch session.state {
+        switch state {
         case .connected: return "Connected — \(name)"
         case .connecting: return "Connecting…"
         case .disconnecting: return "Disconnecting…"
@@ -116,110 +36,50 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    private var dataSource: Assets.DataSource { library.settings.dataSource ?? .runetfreedom }
+    var iconName: String {
+        switch state {
+        case .connected: "shield.fill"
+        case .connecting, .disconnecting: "shield.lefthalf.filled"
+        case .disconnected, .failed: "shield"
+        }
+    }
 
-    /// "Xray v26.9.9": the version in use, visible without opening the submenu.
-    private var xrayTitle: String {
+    var dataSource: Assets.DataSource { library.settings.dataSource ?? .runetfreedom }
+
+    /// "Xray v26.9.9": the version in use.
+    var xrayTitle: String {
         library.settings.xrayBinary.map { "Xray " + URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent }
             ?? "Xray from v2rayN"
     }
 
-    /// Versions (checkmark on the one in use; "works" once it has carried traffic), routing
-    /// data, tunnel exclusions: everything about the core, one level down.
-    private func xrayMenu() -> NSMenu {
-        let menu = NSMenu()
-        let s = library.settings
-        menu.addItem(.sectionHeader(title: "Version"))
+    /// Installed versions and v2rayN's, as (path, title); "works" once it has carried traffic.
+    var xrayVersions: [(path: String, title: String)] {
+        _ = tick
         var versions = Assets.installedXray().map { tag in
             (Assets.xrayPath(tag), tag == Assets.testedXray ? "\(tag) (tested with XrayBar)" : tag)
         }
         if FileManager.default.isExecutableFile(atPath: Settings.v2rayNXray) {
             versions.append((Settings.v2rayNXray, "Xray from v2rayN"))
         }
-        for (path, title) in versions {
-            let i = action(path == s.goodXray ? "\(title) — works" : title, #selector(selectXray(_:)))
-            i.representedObject = path
-            i.state = path == s.xrayPath ? .on : .off
-            menu.addItem(i)
-        }
-        if !Assets.installedXray().contains(Assets.testedXray) {
-            menu.addItem(action("Download \(Assets.testedXray) (tested with XrayBar)", #selector(downloadTestedXray)))
-        }
-        menu.addItem(updating ? disabled("Downloading…") : action("Check for Newer Versions…", #selector(checkNewerXray)))
-
-        menu.addItem(.separator())
-        menu.addItem(.sectionHeader(title: "Routing Data"))
-        menu.addItem(disabled(s.assetsDir == Assets.dir.path ? dataSource.title : "From v2rayN"))
-        menu.addItem(updating ? disabled("Updating…") : action("Update Routing Data", #selector(updateData)))
-        let sources = NSMenu()
-        for source in Assets.DataSource.allCases {
-            let i = action(source.title, #selector(selectDataSource(_:)))
-            i.representedObject = source.rawValue
-            i.state = source == dataSource ? .on : .off
-            sources.addItem(i)
-        }
-        menu.addItem(submenu("Source", sources))
-
-        menu.addItem(.separator())
-        let excluded = s.routeExclusions ?? []
-        menu.addItem(action(excluded.isEmpty ? "Exclude from Tunnel…" : "Exclude from Tunnel (\(excluded.count))…",
-                            #selector(editExclusions)))
-        return menu
-    }
-
-    private func diagnosticsMenu() -> NSMenu {
-        let menu = NSMenu()
-        menu.addItem(action("Show Xray Log", #selector(showLog)))
-        let detailed = action("Detailed Log", #selector(toggleDetailedLog))
-        detailed.state = library.settings.detailedLog == true ? .on : .off
-        menu.addItem(detailed)
-        menu.addItem(action("Show Data Folder", #selector(showDataFolder)))
-        if Helper.installed {
-            menu.addItem(.separator())
-            menu.addItem(action("Uninstall Helper…", #selector(uninstallHelper)))
-        }
-        return menu
-    }
-
-    private func submenu(_ title: String, _ menu: NSMenu) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        i.submenu = menu
-        return i
-    }
-
-    private func action(_ title: String, _ selector: Selector, key: String = "") -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: selector, keyEquivalent: key)
-        i.target = self
-        return i
-    }
-
-    private func disabled(_ title: String) -> NSMenuItem {
-        let i = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        i.isEnabled = false
-        return i
+        return versions.map { ($0.0, $0.0 == library.settings.goodXray ? "\($0.1) — works" : $0.1) }
     }
 
     // MARK: State
 
     private func stateChanged() {
-        updateIcon()
+        state = session.state
+        if state == .connecting { changedWhileConnected = false }
+        tick += 1
         trialIfNeeded()
         if case .failed(let message) = session.state { alert("Could not connect", message) }
     }
 
-    private func updateIcon() {
-        let symbol = switch session.state {
-        case .connected: "shield.fill"
-        case .connecting, .disconnecting: "shield.lefthalf.filled"
-        case .disconnected, .failed: "shield"
-        }
-        item.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "XrayBar")
-    }
-
     // MARK: Actions
 
-    @objc private func connect() { session.connect(library) }
-    @objc private func restore() { session.restore() }
+    func connect() { session.connect(library) }
+    func disconnect() { session.disconnect() }
+    func reconnect() { session.reconnect(library) }
+    func restore() { session.restore(); tick += 1 }
 
     /// A previous session ended without cleaning up (power loss, crash of the root script).
     private func offerRestore() {
@@ -233,28 +93,26 @@ final class MenuBar: NSObject, NSMenuDelegate {
         if a.runModal() == .alertFirstButtonReturn { session.restore() }
     }
 
-    @objc private func disconnect() { session.disconnect() }
-
-    @objc private func selectProfile(_ sender: NSMenuItem) {
-        library.selectedProfile = sender.representedObject as? UUID
+    func selectProfile(_ id: UUID) {
+        guard id != library.profile?.id else { return }
+        library.selectedProfile = id
         saveSelection()
     }
 
-    @objc private func selectRouting(_ sender: NSMenuItem) {
-        library.selectedRouting = sender.representedObject as? UUID
+    func selectRouting(_ id: UUID) {
+        guard id != library.routing.id else { return }
+        library.selectedRouting = id
         saveSelection()
     }
 
-    @objc private func removeProfile(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? UUID,
-              let p = library.profiles.first(where: { $0.id == id }), confirmRemove(p.name) else { return }
+    func removeProfile(_ id: UUID) {
+        guard let p = library.profiles.first(where: { $0.id == id }), confirmRemove(p.name) else { return }
         library.profiles.removeAll { $0.id == id }
         save()
     }
 
-    @objc private func removeRouting(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? UUID,
-              let r = library.routingSets.first(where: { $0.id == id }), confirmRemove(r.name) else { return }
+    func removeRouting(_ id: UUID) {
+        guard let r = library.routingSets.first(where: { $0.id == id }), confirmRemove(r.name) else { return }
         library.routingSets.removeAll { $0.id == id }
         save()
     }
@@ -271,7 +129,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
     }
 
     /// Downloads and verifies the routing data (7-Assets), then switches to it.
-    @objc private func updateData() {
+    func updateData() {
         updating = true
         let source = dataSource
         Task {
@@ -290,15 +148,14 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
     // MARK: Xray versions (D23)
 
-    @objc private func selectXray(_ sender: NSMenuItem) {
-        guard let path = sender.representedObject as? String else { return }
+    func selectXray(_ path: String) {
         library.settings.xrayBinary = path == Settings.v2rayNXray ? nil : path
         saveSelection()
     }
 
-    @objc private func downloadTestedXray() { install(Assets.testedXray) }
+    func downloadTestedXray() { install(Assets.testedXray) }
 
-    @objc private func checkNewerXray() {
+    func checkNewerXray() {
         updating = true
         Task {
             defer { updating = false }
@@ -327,7 +184,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
     private func install(_ tag: String) {
         updating = true
         Task {
-            defer { updating = false }
+            defer { updating = false; tick += 1 }
             do {
                 library.settings.xrayBinary = try await Assets.installXray(tag)
                 save()
@@ -365,14 +222,14 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func selectDataSource(_ sender: NSMenuItem) {
-        library.settings.dataSource = (sender.representedObject as? String).flatMap(Assets.DataSource.init)
+    func selectDataSource(_ source: Assets.DataSource) {
+        library.settings.dataSource = source
         save()
         alert("Routing data source changed", "Choose Update Routing Data to download it.")
     }
 
     /// Networks the system routes outside the tunnel, e.g. a work network reached by another VPN.
-    @objc private func editExclusions() {
+    func editExclusions() {
         NSApp.activate()
         let a = Self.newAlert()
         a.messageText = "Exclude from Tunnel"
@@ -396,7 +253,10 @@ final class MenuBar: NSObject, NSMenuDelegate {
     }
 
     /// A standard login item (System Settings › General › Login Items), not a launch agent.
-    @objc private func toggleOpenAtLogin() {
+    var opensAtLogin: Bool { _ = tick; return SMAppService.mainApp.status == .enabled }
+
+    func toggleOpenAtLogin() {
+        defer { tick += 1 }
         do {
             if SMAppService.mainApp.status == .enabled {
                 try SMAppService.mainApp.unregister()
@@ -412,7 +272,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
 
     /// Installs (or updates) the root-owned helper: one administrator prompt now, then Connect
     /// asks for Touch ID or the password through the system dialog.
-    @objc private func installHelper() {
+    func installHelper() {
         guard let script = Helper.bundledScript else { return }
         NSApp.activate()
         let a = Self.newAlert()
@@ -425,6 +285,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         guard a.runModal() == .alertFirstButtonReturn else { return }
         do {
             try session.runPrivileged([Helper.bundledHelper.path, script.path], detached: false, script: "xraybar-install")
+            tick += 1
             alert("Helper installed", "Connect now asks for Touch ID or your password.")
         } catch is CancellationError {
         } catch {
@@ -432,12 +293,13 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func uninstallHelper() {
+    func uninstallHelper() {
         guard session.state != .connected, confirmRemove("XrayBar helper") else {
             return session.state == .connected ? alert("Disconnect first", "The helper runs the current connection.") : ()
         }
         do {
             try session.runPrivileged(["--uninstall"], detached: false, script: "xraybar-install")
+            tick += 1
             alert("Helper removed", "Connect asks for your administrator password again.")
         } catch is CancellationError {
         } catch {
@@ -445,22 +307,20 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func toggleDetailedLog() {
+    func toggleDetailedLog() {
         library.settings.detailedLog = !(library.settings.detailedLog ?? false)
         saveSelection()
     }
 
-    /// A running session keeps its config; changes apply on the next Connect.
+    /// A running session keeps its config; the panel offers Reconnect to apply the change.
     private func saveSelection() {
         save()
-        if session.state == .connected {
-            alert("Reconnect to apply", "The change takes effect the next time you connect.")
-        }
+        if session.state == .connected { changedWhileConnected = true }
     }
 
     /// A copied vless:// link (one per line), or a copied image containing QR codes, e.g. a
     /// screenshot taken with ⌘⇧⌃4 (the system tool; XrayBar never captures the screen, D27).
-    @objc private func importClipboard() {
+    func importClipboard() {
         let pasteboard = NSPasteboard.general
         if let text = pasteboard.string(forType: .string) {
             importLinks(text.split(whereSeparator: \.isNewline).map(String.init))
@@ -499,7 +359,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func importV2rayN() {
+    func importV2rayN() {
         do {
             let imported = try Import.fromV2rayN()
             let added = Import.merge(imported, into: &library)
@@ -512,7 +372,7 @@ final class MenuBar: NSObject, NSMenuDelegate {
     }
 
     /// The selected server as a QR code and link, e.g. to add it on a phone.
-    @objc private func shareServer() {
+    func shareServer() {
         guard let profile = library.profile else { return }
         let link = Import.link(for: profile)
         NSApp.activate()
@@ -548,19 +408,19 @@ final class MenuBar: NSObject, NSMenuDelegate {
         return image
     }
 
-    @objc private func showLog() {
+    func showLog() {
         guard FileManager.default.fileExists(atPath: Store.logFile.path) else {
             return alert("No log yet", "The log appears after the first connection.")
         }
         NSWorkspace.shared.open(Store.logFile)
     }
 
-    @objc private func showDataFolder() {
+    func showDataFolder() {
         try? FileManager.default.createDirectory(at: Store.dir, withIntermediateDirectories: true)
         NSWorkspace.shared.activateFileViewerSelecting([Store.libraryFile])
     }
 
-    @objc private func quit() {
+    func quit() {
         session.disconnect()      // the root session also stops by itself when the app exits
         NSApp.terminate(nil)
     }

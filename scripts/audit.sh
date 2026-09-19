@@ -4,7 +4,7 @@
 set -u
 cd "$(dirname "$0")/.."
 
-SWIFT_BUDGET=1400   # lines in Sources/, excluding blank lines (raised from 1200, D23)
+SWIFT_BUDGET=1500   # lines in Sources/XrayBar, excluding blank lines (1200 → 1400 D23 → 1500 D29)
 HELPER_BUDGET=150   # lines in the root helper (Sources/XrayBarHelper), excluding blank lines
 SHELL_BUDGET=220    # lines in the root scripts (session + install), excluding blank lines
 

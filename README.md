@@ -33,7 +33,7 @@ one-click switch back if no traffic passes. **Update Routing Data** fetches
 install is used (`~/Library/Application Support/v2rayN/bin`). Import servers with
 **Import Link or QR Code from Clipboard** (copy a `vless://…` link, or press ⌘⇧⌃4 and select a
 QR code — the screenshot goes to the clipboard), or **Import from v2rayN…** (read-only).
-**Share Server…** shows a QR code. Hold **Option** in the menu to remove a server or routing set.
+**Share Server…** shows a QR code. Right-click a server or routing set in the panel to remove it.
 
 Connect asks for your administrator password: creating a TUN interface needs root.
 **Use Touch ID to Connect…** installs a small root-owned helper once; after that each Connect
@@ -42,8 +42,9 @@ asks for Touch ID (or the password) in a system dialog. Only short, readable cod
 
 ## Can I trust it?
 
-You shouldn't have to take anyone's word for it. The app is ~600 lines of Swift in six files
-meant to be read in order, plus a ~100-line root script, with zero dependencies.
+You shouldn't have to take anyone's word for it. The app is ~1,400 lines of Swift in a handful of
+numbered files meant to be read in order, plus ~200 lines of root scripts and an optional
+~110-line root helper, with zero dependencies.
 
 - [docs/SECURITY.md](docs/SECURITY.md) — what it does, threat model, known limitations.
 - `scripts/audit.sh` — deterministic inventory of privilege, processes, network, file writes.

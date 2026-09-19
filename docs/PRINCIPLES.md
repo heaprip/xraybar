@@ -25,7 +25,7 @@ kitchen sinks or look and behave nothing like a Mac app.
 
 1. **Narrow and whole.** Fewer features, each finished. A feature that cannot be
    done well is left out, not shipped half-way.
-2. **Feels like macOS.** Native `NSMenu`, SF Symbols, system dialogs, system
+2. **Feels like macOS.** A menu bar panel like Wi-Fi's, system controls and menus, SF Symbols, system dialogs, system
    settings windows. No custom chrome, no web views, no invented widgets.
    When in doubt, do what a built-in Apple menu extra would do.
 3. **Quiet.** No network access by the app itself except updates the user

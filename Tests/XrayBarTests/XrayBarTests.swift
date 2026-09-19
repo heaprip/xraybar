@@ -179,7 +179,7 @@ struct AssetsDownloadTests {
 
     @MainActor @Test func qrRoundTrip() throws {
         let link = Import.link(for: profile)
-        let image = MenuBar.qrImage(link, size: 300)
+        let image = AppModel.qrImage(link, size: 300)
         let cg = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
         #expect(try Import.qrCodes(in: cg) == [link])
     }

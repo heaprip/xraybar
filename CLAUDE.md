@@ -3,7 +3,7 @@
 Read `docs/PRINCIPLES.md` first. The short version:
 
 - **Small and readable is a feature.** Keep the app a handful of numbered files read top to
-  bottom (`Sources/XrayBar/1-Model.swift` … `6-Menu.swift`). Prefer straight-line code over
+  bottom (`Sources/XrayBar/1-Model.swift` … `8-Panel.swift`, then `App.swift`). Prefer straight-line code over
   abstractions. `scripts/audit.sh` enforces the size budget; run it before committing.
 - **Zero dependencies.** Apple SDK only. Never add a Swift package.
 - **Root lives in one place:** `Sources/XrayBar/Resources/xraybar-session.sh`. Anything that
@@ -11,8 +11,9 @@ Read `docs/PRINCIPLES.md` first. The short version:
   start; never find processes by name or pattern.
 - **No network I/O in the app** unless the user explicitly started it (future asset updates),
   and then only from one documented place.
-- **Native look.** `NSMenu`/`NSStatusItem`, SF Symbols, `NSAlert`, SwiftUI only for editor
-  windows. No custom styling.
+- **Native look.** A `MenuBarExtra` window panel (like Wi-Fi) with system controls, SwiftUI
+  menus for secondary actions, SF Symbols, `NSAlert`. No custom styling. Avoid `@State` and
+  other SwiftUI macros: the Command Line Tools lack their plugin (see App.swift).
 - **Match v2rayN's behaviour, never copy its code.** v2rayN is GPL-3.0, XrayBar is MIT (D9).
   Read `.ref/v2rayN` (shallow clone, not tracked) to understand *what* it does, then write
   the Swift from Xray's documentation and observed behaviour. No line-by-line translation,
