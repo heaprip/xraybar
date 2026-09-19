@@ -18,7 +18,7 @@ Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modif
 
 | Area | Behaviour | Where |
 |---|---|---|
-| Root | One admin prompt per Connect runs `xraybar-session.sh`, nothing else | `Sources/XrayBar/Resources/xraybar-session.sh` |
+| Root | Without the helper: one admin prompt per Connect runs `xraybar-session.sh`. With the helper (optional, *Use Touch ID to Connect…*): a root-owned LaunchDaemon asks macOS to authorize each Connect (Touch ID or password, system dialog) and runs its root-owned copy of the same script | `xraybar-session.sh`, `xraybar-install.sh`, `Sources/XrayBarHelper/main.swift` |
 | As root | copies the config to `/var/run/xraybar`, starts xray, sets DNS, waits, stops xray, restores DNS; `--restore` cleans up after a session that died | same script |
 | Network (app) | only on request: Xray downloads (the version tested with XrayBar is checked against a SHA-256 pinned in the source, others against their release's `.dgst`), the list of Xray releases (api.github.com), routing data (`.dat`, checked against its published SHA-256). Plus one request to `cp.cloudflare.com/generate_204` through the tunnel after connecting with an Xray version that has not carried traffic yet. Ephemeral session, no cookies or cache | `7-Assets.swift` |
 | Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file, `core/` with the downloaded Xray and `.dat`); `/var/run/xraybar/` (root: config copy while connected, pids; `/var/db/xraybar/dns.saved` survives reboots; log readable by admin users only, errors only unless Detailed Log is on) | `2-Store.swift`, script |
@@ -39,11 +39,11 @@ Protects against:
   copy of the config and refuses configs that set log file paths.
 
 Does not protect against (known limitations, stage 1):
-- **Malware already running as your user.** It could replace the xray binary or the
-  script in user-writable locations before you type your password. This is true of every
-  "ask for password, then run a tool from my home folder" design, including v2rayN
-  (which additionally pipes your sudo password through stdin). Stage 3 moves the
-  privileged part into a root-owned LaunchDaemon, which closes this gap.
+- **Malware already running as your user.** Without the helper it could replace the
+  session script before you type your password. With the helper installed, the root logic
+  (helper and script) is root-owned and cannot be changed without admin rights; the xray
+  binary and the config still come from your user account (the script validates the config).
+  v2rayN runs its cores from user-writable folders and pipes your sudo password through stdin.
 - A compromised Xray-core release upstream. The pinned hash proves you got exactly the
   release that was tested, not that it is benign. You can build Xray from source with Go
   and compare. Routing data is checked only against its same-origin checksum.

@@ -36,7 +36,8 @@ QR code — the screenshot goes to the clipboard), or **Import from v2rayN…** 
 **Share Server…** shows a QR code. Hold **Option** in the menu to remove a server or routing set.
 
 Connect asks for your administrator password: creating a TUN interface needs root.
-Only one short, readable script runs as root:
+**Use Touch ID to Connect…** installs a small root-owned helper once; after that each Connect
+asks for Touch ID (or the password) in a system dialog. Only short, readable code runs as root:
 [`Sources/XrayBar/Resources/xraybar-session.sh`](Sources/XrayBar/Resources/xraybar-session.sh).
 
 ## Can I trust it?

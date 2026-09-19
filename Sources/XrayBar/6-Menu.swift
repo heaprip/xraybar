@@ -64,6 +64,11 @@ final class MenuBar: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(submenu(xrayTitle, xrayMenu()))
         menu.addItem(submenu("Diagnostics", diagnosticsMenu()))
+        if !Helper.installed {
+            menu.addItem(action("Use Touch ID to Connect…", #selector(installHelper)))
+        } else if Helper.outdated {
+            menu.addItem(action("Update Helper…", #selector(installHelper)))
+        }
         if Bundle.main.bundlePath.hasSuffix(".app") {   // login items need an app bundle
             let login = action("Open at Login", #selector(toggleOpenAtLogin))
             login.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -169,6 +174,10 @@ final class MenuBar: NSObject, NSMenuDelegate {
         detailed.state = library.settings.detailedLog == true ? .on : .off
         menu.addItem(detailed)
         menu.addItem(action("Show Data Folder", #selector(showDataFolder)))
+        if Helper.installed {
+            menu.addItem(.separator())
+            menu.addItem(action("Uninstall Helper…", #selector(uninstallHelper)))
+        }
         return menu
     }
 
@@ -396,6 +405,43 @@ final class MenuBar: NSObject, NSMenuDelegate {
             }
         } catch {
             alert("Could not change Open at Login", error.localizedDescription)
+        }
+    }
+
+    // MARK: Helper (D28)
+
+    /// Installs (or updates) the root-owned helper: one administrator prompt now, then Connect
+    /// asks for Touch ID or the password through the system dialog.
+    @objc private func installHelper() {
+        guard let script = Helper.bundledScript else { return }
+        NSApp.activate()
+        let a = Self.newAlert()
+        a.messageText = Helper.installed ? "Update the helper?" : "Use Touch ID to connect?"
+        a.informativeText = "XrayBar installs a small helper that runs as root (in /Library/Application Support/XrayBar "
+            + "and /Library/LaunchDaemons). After that, each Connect asks for Touch ID or your password in a "
+            + "system dialog. Diagnostics › Uninstall Helper removes it. You will be asked for your password once now."
+        a.addButton(withTitle: Helper.installed ? "Update" : "Install")
+        a.addButton(withTitle: "Cancel")
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        do {
+            try session.runPrivileged([Helper.bundledHelper.path, script.path], detached: false, script: "xraybar-install")
+            alert("Helper installed", "Connect now asks for Touch ID or your password.")
+        } catch is CancellationError {
+        } catch {
+            alert("Could not install the helper", error.localizedDescription)
+        }
+    }
+
+    @objc private func uninstallHelper() {
+        guard session.state != .connected, confirmRemove("XrayBar helper") else {
+            return session.state == .connected ? alert("Disconnect first", "The helper runs the current connection.") : ()
+        }
+        do {
+            try session.runPrivileged(["--uninstall"], detached: false, script: "xraybar-install")
+            alert("Helper removed", "Connect asks for your administrator password again.")
+        } catch is CancellationError {
+        } catch {
+            alert("Could not remove the helper", error.localizedDescription)
         }
     }
 

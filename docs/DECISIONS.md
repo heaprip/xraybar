@@ -290,3 +290,27 @@ clipboard: ⌘⇧⌃4 (Apple's screenshot tool, run by the user) puts the select
 clipboard, and *Import Link or QR Code from Clipboard* accepts that image or a vless:// link.
 The menu title and the "nothing to import" message say both work. `audit.sh` expects no
 screen-capture APIs.
+
+## D28. Stage 3: a root-owned LaunchDaemon helper, Touch ID per Connect (2026-09-21)
+
+Stage 1–2 run the session script from the app bundle through an admin prompt that accepts
+only a password, and user-level malware could alter that script before it runs as root.
+
+→ **Install once** (*Set Up Touch ID…*, one admin prompt via the old path) runs
+`xraybar-install.sh` as root, which only: copies `XrayBarHelper` and `xraybar-session.sh` into
+`/Library/Application Support/XrayBar/` (root:wheel), writes
+`/Library/LaunchDaemons/io.github.xraybar.helper.plist` (socket-activated, `AbandonProcessGroup`
+so a session outlives the helper), adds the authorization right `io.github.xraybar.connect`
+(admin, not shared, timeout 0: every Connect authenticates), and loads the daemon.
+`--uninstall` removes exactly those four things.
+→ **Connect**: the app sends the helper, over `/var/run/xraybar-helper.sock`, an
+`AuthorizationExternalForm` (no rights) and the session arguments. The helper asks for the
+right with interaction allowed, so macOS shows its own dialog (Touch ID or password) in the
+user's session: the check happens in root code, not in the app. Then it starts the root-owned
+session script. The app PID argument is replaced with the socket peer's PID. *Restore* needs
+no authorization (it only cleans up). Disconnect stays the stop file.
+→ The helper is ~150 lines of Swift with its own size budget; all root logic stays in the one
+session script. The app compares the SHA-256 of its bundled helper and script with the
+installed copies and offers *Update Helper…* when they differ. Without the helper everything
+works as before (admin prompt per Connect).
+→ Still from user space: the xray binary and the config (validated by the script as before).

@@ -23,7 +23,7 @@
 - More transports if needed (xhttp, ws, grpc), other protocols only on demand.
 
 ## Stage 3 — solid
-- Privileged LaunchDaemon helper instead of an admin prompt per connect.
+- ✅ Privileged LaunchDaemon helper (optional): Touch ID or password per Connect via the system dialog (D28).
 - Credentials in Keychain.
 - Sleep/wake, network switch, IPv6 verified.
 - ✅ `.app` bundle script with ad-hoc signing, Open at Login (done early, independent of the helper).

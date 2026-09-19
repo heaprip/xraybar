@@ -36,7 +36,9 @@ v2rayN (`~/Library/Application Support/v2rayN/bin`). Серверы
 удалить сервер или набор правил.
 
 При подключении запрашивается пароль администратора: для создания TUN-интерфейса нужен root.
-Под root выполняется только один короткий читаемый скрипт:
+**Use Touch ID to Connect…** один раз устанавливает небольшой помощник, принадлежащий root;
+после этого каждый Connect спрашивает Touch ID (или пароль) в системном окне. Под root
+выполняется только короткий читаемый код:
 [`Sources/XrayBar/Resources/xraybar-session.sh`](Sources/XrayBar/Resources/xraybar-session.sh).
 
 ## Можно ли ему доверять?

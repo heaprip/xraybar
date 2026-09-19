@@ -6,6 +6,8 @@
 // The app never signals a process it did not start and never looks processes up by name (D5).
 
 import AppKit
+import CryptoKit
+import Security
 
 @MainActor
 final class Session {
@@ -42,8 +44,10 @@ final class Session {
             try validate(XrayConfig.validationCopy(config), settings: library.settings)
             try? FileManager.default.removeItem(at: Store.stopFile)
             let s = library.settings
-            try runPrivileged([s.xrayPath, s.assetsDir, Store.configFile.path, Store.stopFile.path,
-                               String(ProcessInfo.processInfo.processIdentifier)] + s.systemDNS)
+            let args = [s.xrayPath, s.assetsDir, Store.configFile.path, Store.stopFile.path,
+                        String(ProcessInfo.processInfo.processIdentifier)] + s.systemDNS
+            if Helper.installed { try Helper.request(["action": "connect", "args": args], authorize: true) }
+            else { try runPrivileged(args) }
             connectStarted = Date()
             set(.connecting)
         } catch is CancellationError {
@@ -86,8 +90,8 @@ final class Session {
 
     /// The only path to root. Every argument is single-quoted for the shell; the whole
     /// command is then escaped into an AppleScript string. A session runs detached.
-    private func runPrivileged(_ arguments: [String], detached: Bool = true) throws {
-        guard let script = Bundle.module.url(forResource: "xraybar-session", withExtension: "sh") else {
+    func runPrivileged(_ arguments: [String], detached: Bool = true, script name: String = "xraybar-session") throws {
+        guard let script = Bundle.module.url(forResource: name, withExtension: "sh") else {
             throw NSError(domain: "XrayBar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Session script missing"])
         }
         let command = "/bin/bash " + ([script.path] + arguments).map(Self.shellQuoted).joined(separator: " ")
@@ -122,7 +126,8 @@ final class Session {
     /// Stops a leftover xray and restores DNS (one administrator prompt).
     func restore() {
         do {
-            try runPrivileged(["--restore"], detached: false)
+            if Helper.installed { try Helper.request(["action": "restore"], authorize: false) }
+            else { try runPrivileged(["--restore"], detached: false) }
             set(.disconnected)
         } catch is CancellationError {
         } catch {
@@ -211,4 +216,67 @@ final class Session {
     }
 
     private func fail(_ message: String) { set(.failed(message)) }
+}
+
+/// Talks to the installed LaunchDaemon helper (D28) over its socket. Only used when installed.
+enum Helper {
+    static let plist = "/Library/LaunchDaemons/io.github.xraybar.helper.plist"
+    static let installedDir = "/Library/Application Support/XrayBar"
+    static let socket = "/var/run/xraybar-helper.sock"
+    static var installed: Bool { FileManager.default.fileExists(atPath: plist) }
+
+    /// Bundled helper and session script, to install or to compare with the installed copies.
+    static var bundledHelper: URL { Bundle.main.executableURL!.deletingLastPathComponent().appendingPathComponent("XrayBarHelper") }
+    static var bundledScript: URL? { Bundle.module.url(forResource: "xraybar-session", withExtension: "sh") }
+
+    /// The installed copies differ from this app's (the app was updated): offer to update.
+    static var outdated: Bool {
+        guard installed, let script = bundledScript else { return false }
+        return hash(bundledHelper.path) != hash(installedDir + "/XrayBarHelper")
+            || hash(script.path) != hash(installedDir + "/xraybar-session.sh")
+    }
+
+    private static func hash(_ path: String) -> String? {
+        (try? Data(contentsOf: URL(fileURLWithPath: path))).map { SHA256.hash(data: $0).description }
+    }
+
+    /// Sends one request; with `authorize`, includes an (empty) authorization for the helper to
+    /// check with the system dialog. Blocks until the helper answers.
+    static func request(_ body: [String: Any], authorize: Bool) throws {
+        var body = body
+        var auth: AuthorizationRef?
+        if authorize {
+            guard AuthorizationCreate(nil, nil, [], &auth) == errAuthorizationSuccess, let auth else { throw failure("Authorization failed") }
+            var external = AuthorizationExternalForm()
+            AuthorizationMakeExternalForm(auth, &external)
+            body["auth"] = withUnsafeBytes(of: &external) { Data($0) }.base64EncodedString()
+        }
+        defer { if let auth { AuthorizationFree(auth, []) } }   // must outlive the helper's check
+
+        let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { throw failure("socket failed") }
+        defer { close(fd) }
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        withUnsafeMutableBytes(of: &address.sun_path) { socket.utf8CString.withUnsafeBytes($0.copyMemory) }
+        let connected = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+        }
+        guard connected == 0 else { throw failure("The helper is not running. Reinstall it: Diagnostics › Update Helper.") }
+        let data = try JSONSerialization.data(withJSONObject: body)
+        _ = data.withUnsafeBytes { write(fd, $0.baseAddress, $0.count) }
+        shutdown(fd, SHUT_WR)
+
+        var reply = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while case let n = read(fd, &buffer, buffer.count), n > 0 { reply.append(buffer, count: n) }
+        let answer = (try? JSONSerialization.jsonObject(with: reply)) as? [String: Any] ?? [:]
+        if answer["ok"] as? Bool == true { return }
+        if answer["cancelled"] as? Bool == true { throw CancellationError() }
+        throw failure(answer["error"] as? String ?? "The helper did not answer")
+    }
+
+    private static func failure(_ message: String) -> NSError {
+        NSError(domain: "XrayBar", code: 20, userInfo: [NSLocalizedDescriptionKey: message])
+    }
 }

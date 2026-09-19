@@ -5,17 +5,20 @@ set -u
 cd "$(dirname "$0")/.."
 
 SWIFT_BUDGET=1400   # lines in Sources/, excluding blank lines (raised from 1200, D23)
-SHELL_BUDGET=150    # lines in the privileged script, excluding blank lines
+HELPER_BUDGET=150   # lines in the root helper (Sources/XrayBarHelper), excluding blank lines
+SHELL_BUDGET=220    # lines in the root scripts (session + install), excluding blank lines
 
 section() { printf '\n== %s\n' "$1"; }
 find_code() { grep -rnE "$1" Sources --include='*.swift' --include='*.sh' || echo "  (none)"; }
 
 section "Size budget"
 swift_lines=$(cat Sources/XrayBar/*.swift | grep -cv '^[[:space:]]*$')
-shell_lines=$(grep -cv '^[[:space:]]*$' Sources/XrayBar/Resources/xraybar-session.sh)
-echo "Swift: $swift_lines / $SWIFT_BUDGET    privileged script: $shell_lines / $SHELL_BUDGET"
+helper_lines=$(cat Sources/XrayBarHelper/*.swift | grep -cv '^[[:space:]]*$')
+shell_lines=$(cat Sources/XrayBar/Resources/*.sh | grep -cv '^[[:space:]]*$')
+echo "App Swift: $swift_lines / $SWIFT_BUDGET    root helper: $helper_lines / $HELPER_BUDGET    root scripts: $shell_lines / $SHELL_BUDGET"
 fail=0
 (( swift_lines <= SWIFT_BUDGET )) || { echo "FAIL: Swift budget exceeded"; fail=1; }
+(( helper_lines <= HELPER_BUDGET )) || { echo "FAIL: helper budget exceeded"; fail=1; }
 (( shell_lines <= SHELL_BUDGET )) || { echo "FAIL: script budget exceeded"; fail=1; }
 
 section "Files in the repository that are not source, docs or config"
@@ -45,8 +48,8 @@ find_code 'dlopen|dlsym|NSClassFromString|perform\(|JavaScriptCore|eval |base64|
 section "File writes outside the app's own directory"
 find_code 'write\(to:|createFile|moveItem|removeItem|install |> ?"|>>'
 
-section "Commands run as root (every command in the privileged script)"
-grep -nE '^\s*[a-z_]+=?|networksetup|route |kill |install |rm ' Sources/XrayBar/Resources/xraybar-session.sh \
-    | grep -vE '^\s*[0-9]+:\s*#' | grep -E 'networksetup|route |kill |install |rm |XRAY' || true
+section "Commands run as root (every command in the root scripts)"
+grep -nE '^\s*[a-z_]+=?|networksetup|route |kill |install |rm |launchctl|authorizationdb' Sources/XrayBar/Resources/*.sh \
+    | grep -vE '^\s*[0-9]+:\s*#' | grep -E 'networksetup|route |kill |install |rm |launchctl|authorizationdb|XRAY' || true
 
 exit $fail

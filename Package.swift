@@ -8,8 +8,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "XrayBar",
-            resources: [.copy("Resources/xraybar-session.sh")]
+            resources: [.copy("Resources/xraybar-session.sh"), .copy("Resources/xraybar-install.sh")]
         ),
+        // Root side, installed once as a LaunchDaemon (docs/DECISIONS.md D28).
+        .executableTarget(name: "XrayBarHelper"),
         .testTarget(name: "XrayBarTests", dependencies: ["XrayBar"]),
     ]
 )

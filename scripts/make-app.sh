@@ -12,6 +12,7 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp Support/Info.plist "$app/Contents/Info.plist"
 cp "$bin/XrayBar" "$app/Contents/MacOS/XrayBar"
+cp "$bin/XrayBarHelper" "$app/Contents/MacOS/XrayBarHelper"   # installed as root only on request (D28)
 # SwiftPM looks for the resource bundle (the session script) in Contents/Resources.
 cp -R "$bin/XrayBar_XrayBar.bundle" "$app/Contents/Resources/"
 # The icon is drawn from source at build time (no binary images in the repository).
