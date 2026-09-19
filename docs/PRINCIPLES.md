@@ -36,15 +36,15 @@ kitchen sinks or look and behave nothing like a Mac app.
 ## Engineering principles
 
 1. **Small enough to read in one sitting.** The whole app is a few linear Swift
-   files meant to be read top to bottom, plus one privileged shell script.
+   files meant to be read top to bottom, plus the short root scripts and helper.
    A hard size budget is enforced by `scripts/audit.sh`.
 2. **Zero third-party code** in the app. Apple SDK only. Xray-core and the `.dat`
    files are the only external artifacts and are verified by checksum.
 3. **Flow over abstraction.** Prefer a straight sequence of steps a reviewer can
    follow over layers, protocols and dependency injection. Split code only along
    real boundaries: UI, config generation, privileged execution.
-4. **Privilege is tiny and visible.** Everything that runs as root lives in one
-   short shell script with a fixed set of actions.
+4. **Privilege is tiny and visible.** Everything that runs as root is the session script,
+   the install script and the optional helper, each short, with a fixed set of actions.
 5. **Compatible, not copied.** Where v2rayN already got behaviour right (TUN inbound,
    rule expansion, DNS split) or defined a format people use (routing sets), XrayBar
    matches that behaviour and format, implemented from scratch. v2rayN is GPL-3.0 and
