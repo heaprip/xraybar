@@ -362,3 +362,4 @@ continuous corners; row padding 4; round icons 26; section titles 13 pt semibold
 glass comes from `backgroundStyle(.ultraThinMaterial)` on 26 and `.regularMaterial` on 27,
 drawn by the system (replaces D30's NSVisualEffectView workaround).
 → If the project ever requires Xcode, switching to the package itself is a small change.
+→ App size budget 1500 → 1600 (1513 now): the Control Center panel and its measurements.
