@@ -18,6 +18,9 @@ enum Metrics {
     static let panelPadding: CGFloat = 6        // above the first and below the last row
     static let circle: CGFloat = 26             // round row icon
     static let corner: CGFloat = 10             // hover highlight, continuous corners
+    static let iconRow: CGFloat = 30            // row heights: icon 26 + 4, text 18 + 4, section 20
+    static let textRow: CGFloat = 22
+    static let sectionRow: CGFloat = 20
 }
 
 struct Panel: View {
@@ -108,21 +111,19 @@ struct Panel: View {
         let rest = items.count <= 4 || !isOpen ? [] : items.filter { $0.id != selected }
         let moreID = expanded == \AppModel.serversExpanded ? Panel.moreRows.servers : Panel.moreRows.routing
         func row(_ c: (id: UUID, name: String, detail: String)) -> some View {
-            Button { select(c.id) } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: icon).resizable().scaledToFit().padding(6)
-                        .foregroundStyle(c.id == selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
-                        .frame(width: Metrics.circle, height: Metrics.circle)
-                        .background(Circle().fill(c.id == selected ? Color.accentColor : .clear))
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(c.name).lineLimit(1)
-                        if c.id == selected, let status { Text(status).font(.caption).foregroundStyle(.secondary) }
-                    }
-                    Spacer()
-                    if names[c.name]!.count > 1 { Text(c.detail).foregroundStyle(.secondary).lineLimit(1) }
+            HStack(spacing: 8) {
+                Image(systemName: icon).resizable().scaledToFit().padding(6)
+                    .foregroundStyle(c.id == selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
+                    .frame(width: Metrics.circle, height: Metrics.circle)
+                    .background(Circle().fill(c.id == selected ? Color.accentColor : .clear))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(c.name).lineLimit(1)
+                    if c.id == selected, let status { Text(status).font(.caption).foregroundStyle(.secondary) }
                 }
+                Spacer()
+                if names[c.name]!.count > 1 { Text(c.detail).foregroundStyle(.secondary).lineLimit(1) }
             }
-            .buttonStyle(RowStyle(highlighted: model.hovered == c.id))
+            .row(height: Metrics.iconRow, highlighted: model.hovered == c.id) { select(c.id) }
             .onHover { model.hovered = $0 ? c.id : (model.hovered == c.id ? nil : model.hovered) }
             .contextMenu { Button("Remove “\(c.name)”…", role: .destructive) { remove(c.id) } }
         }
@@ -130,16 +131,15 @@ struct Panel: View {
             ForEach(first, id: \.id) { row($0) }
             if items.count > 4 {
                 // Like Wi-Fi's "Other Networks": a section title with a chevron, shaded while open.
-                Button { model[keyPath: expanded].toggle() } label: {
-                    HStack {
-                        SectionTitle.text(more)
-                        Spacer()
-                        Image(systemName: "chevron.right").resizable().scaledToFit().frame(width: 10, height: 10)
-                            .rotationEffect(.degrees(isOpen ? 90 : 0))
-                    }
-                    .frame(height: 20)
+                HStack {
+                    SectionTitle.text(more)
+                    Spacer()
+                    Image(systemName: "chevron.right").resizable().scaledToFit().frame(width: 10, height: 10)
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }
-                .buttonStyle(RowStyle(highlighted: model.hovered == moreID || isOpen))
+                .row(height: Metrics.sectionRow + Metrics.itemPadding, highlighted: model.hovered == moreID || isOpen) {
+                    model[keyPath: expanded].toggle()
+                }
                 .onHover { model.hovered = $0 ? moreID : nil }
             }
             ForEach(rest, id: \.id) { row($0) }
@@ -204,7 +204,7 @@ struct SectionTitle: View {
     init(_ title: String) { self.title = title }
 
     var body: some View {
-        Self.text(title).padding(.horizontal, Metrics.contentInset).frame(height: 20)
+        Self.text(title).padding(.horizontal, Metrics.contentInset).frame(height: Metrics.sectionRow)
     }
 
     static func text(_ title: String) -> some View {
@@ -240,6 +240,20 @@ struct RowStyle: ButtonStyle {
 }
 
 extension View {
+    /// A clickable Control Center row with a fixed height. Not a Button: inside a MenuBarExtra
+    /// window macOS restyles buttons, and rows lost their padding (MacControlCenterUI does the
+    /// same: content, onTapGesture, onHover).
+    func row(height: CGFloat, highlighted: Bool, action: @escaping () -> Void) -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: height)
+            .padding(.horizontal, Metrics.contentInset - Metrics.highlightInset)
+            .contentShape(Rectangle())
+            .background(highlighted ? RowStyle.hover : .clear,
+                        in: RoundedRectangle(cornerRadius: Metrics.corner, style: .continuous))
+            .padding(.horizontal, Metrics.highlightInset)
+            .onTapGesture(perform: action)
+    }
+
     /// The system draws the panel glass from the background style on macOS 26 and later
     /// (as MacControlCenterUI does); earlier systems get a plain material.
     @ViewBuilder func systemPanelBackground() -> some View {

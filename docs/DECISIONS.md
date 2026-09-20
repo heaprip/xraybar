@@ -363,3 +363,13 @@ glass comes from `backgroundStyle(.ultraThinMaterial)` on 26 and `.regularMateri
 drawn by the system (replaces D30's NSVisualEffectView workaround).
 → If the project ever requires Xcode, switching to the package itself is a small change.
 → App size budget 1500 → 1600 (1513 now): the Control Center panel and its measurements.
+
+## D32. Panel rows are not Buttons; make-app always recompiles (2026-09-21)
+
+Live on macOS 26 the rows were squeezed to ~19 pt (icons overlapping) although the same view
+laid out at 30 pt in an NSHostingView: inside a MenuBarExtra window macOS restyles `Button`s,
+and our ButtonStyle's padding was lost. MacControlCenterUI builds its rows without Button.
+→ Rows are content with a fixed height (icon row 30, section row 20 + 4) plus `onTapGesture`
+and `onHover` (the `row(height:highlighted:action:)` modifier), like the library.
+→ SwiftPM under the CLT sometimes skipped a just-edited file ("Build complete (0.15 sec)"),
+so a release could contain old code. `make-app.sh` touches the sources before building.

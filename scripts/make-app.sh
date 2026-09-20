@@ -4,6 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# SwiftPM (CLT, new build system) sometimes misses a source edited moments before a build;
+# refreshing the timestamps makes the release build always compile what is on disk.
+touch Sources/*/*.swift Sources/XrayBar/Resources/*
 swift build -c release
 bin=$(swift build -c release --show-bin-path)
 app=build/XrayBar.app
