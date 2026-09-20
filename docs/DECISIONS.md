@@ -347,3 +347,18 @@ position) opening the menu with everything else.
 kept active; MenuBarExtra's own background follows window activity and looked opaque.
 → Reference for visuals: Apple Design Resources (macOS UI kit). If a future macOS restyles its
 modules, follow it; the HIG's own preference, a plain menu, remains the fallback.
+
+## D31. Libraries allowed; Control Center look from MacControlCenterUI's measurements (2026-09-21)
+
+The author clarified that "minimal" means the app itself, not zero dependencies (PRINCIPLES 2
+and CLAUDE.md updated). The obvious library for a Control Center–style panel is
+orchetect/MacControlCenterUI (MIT, maintained, ~2,400 lines + MenuBarExtraAccess), but it does
+not build with the Command Line Tools: it uses `@State` (a macro on the macOS 27 SDK) and
+`#Preview`, whose plugins ship only with Xcode (checked with SDK 27 and 26.5).
+→ The panel stays our own (~200 lines) with the library's macOS 26 measurements, attributed in
+8-Panel.swift and the README: width 310; content inset 14; highlight inset 6 with 10 pt
+continuous corners; row padding 4; round icons 26; section titles 13 pt semibold at 60 % white
+(dark) / 70 % black (light); hover white 0.3 @ 40 % (dark) / white 0.9 @ 20 % (light); the
+glass comes from `backgroundStyle(.ultraThinMaterial)` on 26 and `.regularMaterial` on 27,
+drawn by the system (replaces D30's NSVisualEffectView workaround).
+→ If the project ever requires Xcode, switching to the package itself is a small change.

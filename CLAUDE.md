@@ -5,7 +5,9 @@ Read `docs/PRINCIPLES.md` first. The short version:
 - **Small and readable is a feature.** Keep the app a handful of numbered files read top to
   bottom (`Sources/XrayBar/1-Model.swift` … `8-Panel.swift`, then `App.swift`). Prefer straight-line code over
   abstractions. `scripts/audit.sh` enforces the size budget; run it before committing.
-- **Zero dependencies.** Apple SDK only. Never add a Swift package.
+- **Small app, libraries allowed.** A well-known, maintained package is fine when it replaces
+  code we would write; pin an exact version and list it in docs/SECURITY.md. It must build
+  with the Command Line Tools (no Xcode-only macro plugins such as `@State` on SDK 27 or `#Preview`).
 - **Root lives in one place:** `Sources/XrayBar/Resources/xraybar-session.sh`. Anything that
   needs root goes there, validated, and nowhere else. Never signal a PID the session did not
   start; never find processes by name or pattern.
