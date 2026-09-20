@@ -1,6 +1,7 @@
-// 8. Panel — the whole UI: the window under the menu bar icon, like Wi-Fi and Control Center.
-// It stays open while choosing; a click outside or on the icon closes it. Frequent things are
-// in the panel (connection, server, routing); everything else is in the "⋯" menu.
+// 8. Panel — the whole UI: the window under the menu bar icon, laid out like the system's
+// Wi-Fi and Bluetooth panels: a title with a switch, rows with round icons (blue = the one in
+// use), long lists expanding in place, and a plain row at the bottom for everything else.
+// It stays open while choosing; a click outside or on the icon closes it.
 
 import SwiftUI
 
@@ -8,67 +9,61 @@ struct Panel: View {
     let model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 2) {
             header
-            Divider().padding(.vertical, 2)
-            section("Server")
-            if model.library.profiles.isEmpty {
-                Text("No servers yet — use ⋯ › Import").foregroundStyle(.secondary).padding(.horizontal, 8)
-            }
-            choices(model.library.profiles.map { ($0.id, $0.name, $0.address) },
-                    selected: model.library.profile?.id, more: "Other Servers",
-                    select: model.selectProfile, remove: model.removeProfile)
-            Divider().padding(.vertical, 2)
-            section("Routing")
-            choices(model.library.routingSets.map { ($0.id, $0.name, "\($0.rules.count) rules") },
-                    selected: model.library.routing.id, more: "Other Routing Sets",
-                    select: model.selectRouting, remove: model.removeRouting)
-            Divider().padding(.vertical, 2)
-            footer
-        }
-        .padding(8)
-        .frame(width: 320)
-    }
-
-    // MARK: Parts
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("XrayBar").font(.headline)
-                    Text(model.statusText).font(.subheadline).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Toggle("Connected", isOn: Binding(
-                    get: { model.state == .connected || model.state == .connecting },
-                    set: { $0 ? model.connect() : model.disconnect() }))
-                    .toggleStyle(.switch).labelsHidden()
-                    .disabled(model.state == .connecting || model.state == .disconnecting)
-            }
             if model.changedWhileConnected && model.state == .connected {
                 notice("Changes apply after reconnecting.", button: "Reconnect", action: model.reconnect)
             }
             if Session.needsRestore && model.tick >= 0 {
                 notice("The last connection did not shut down cleanly.", button: "Restore", action: model.restore)
             }
+            divider
+            section("Server")
+            if model.library.profiles.isEmpty {
+                Text("No servers yet. Import one from XrayBar Options.").foregroundStyle(.secondary).padding(.horizontal, 12)
+            }
+            choices(model.library.profiles.map { ($0.id, $0.name, $0.address) }, icon: "server.rack",
+                    selected: model.library.profile?.id, status: model.statusText, more: "Other Servers",
+                    expanded: \.serversExpanded, select: model.selectProfile, remove: model.removeProfile)
+            divider
+            section("Routing")
+            choices(model.library.routingSets.map { ($0.id, $0.name, "\($0.rules.count) rules") }, icon: "arrow.triangle.branch",
+                    selected: model.library.routing.id, status: nil, more: "Other Routing Sets",
+                    expanded: \.routingExpanded, select: model.selectRouting, remove: model.removeRouting)
+            divider
+            Menu { moreMenu } label: { Text("XrayBar Options").frame(maxWidth: .infinity, alignment: .leading) }
+                .menuStyle(.button).buttonStyle(RowStyle(highlighted: model.hovered == Panel.optionsRow))
+                .onHover { model.hovered = $0 ? Panel.optionsRow : nil }
         }
-        .padding(.horizontal, 8).padding(.top, 4)
+        .padding(.horizontal, 5).padding(.vertical, 8)
+        .frame(width: 320)
+        .background(Blur().ignoresSafeArea())
     }
 
-    private var footer: some View {
+    static let optionsRow = UUID()
+    static let moreRows = (servers: UUID(), routing: UUID())
+
+    // MARK: Parts
+
+    /// Title and the connection switch, as in the Bluetooth and Wi-Fi panels.
+    private var header: some View {
         HStack {
-            Text(model.xrayTitle).font(.subheadline).foregroundStyle(.secondary)
+            Text("XrayBar").font(.headline)
             Spacer()
-            Menu { moreMenu } label: { Image(systemName: "ellipsis.circle").font(.title3) }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            Toggle("Connected", isOn: Binding(
+                get: { model.state == .connected || model.state == .connecting },
+                set: { $0 ? model.connect() : model.disconnect() }))
+                .toggleStyle(.switch).labelsHidden()
+                .disabled(model.state == .connecting || model.state == .disconnecting)
         }
-        .padding(.horizontal, 8).padding(.bottom, 2)
+        .padding(.horizontal, 12).padding(.vertical, 4)
     }
+
+    private var divider: some View { Divider().padding(.horizontal, 12).padding(.vertical, 4) }
 
     private func section(_ title: String) -> some View {
         Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            .padding(.horizontal, 8).padding(.top, 2)
+            .padding(.horizontal, 12).padding(.bottom, 2)
     }
 
     private func notice(_ text: String, button: String, action: @escaping () -> Void) -> some View {
@@ -79,37 +74,55 @@ struct Panel: View {
         }
         .padding(8)
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 7)
     }
 
-    /// Choices with a checkmark, like the Wi-Fi panel: up to four inline; beyond that the
-    /// selected one inline and the rest in a pop-up. A name used twice shows its detail.
-    /// Right-click (or Control-click) a choice to remove it.
-    private func choices(_ items: [(id: UUID, name: String, detail: String)], selected: UUID?, more: String,
+    /// Rows with a round icon; the selected one is blue and, for servers, shows the connection
+    /// state. Up to four inline; beyond that the selected one, then "Other …", which expands in
+    /// place like Wi-Fi's "Other Networks". A name used twice shows its detail. Right-click
+    /// (or Control-click) a row to remove it.
+    private func choices(_ items: [(id: UUID, name: String, detail: String)], icon: String, selected: UUID?,
+                         status: String?, more: String, expanded: ReferenceWritableKeyPath<AppModel, Bool>,
                          select: @escaping (UUID) -> Void, remove: @escaping (UUID) -> Void) -> some View {
         let names = Dictionary(grouping: items, by: \.name)
-        let inline = items.count > 4 ? items.filter { $0.id == selected } : items
-        return VStack(alignment: .leading, spacing: 0) {
-            ForEach(inline, id: \.id) { c in
-                Button { select(c.id) } label: {
-                    HStack {
-                        Image(systemName: "checkmark").opacity(c.id == selected ? 1 : 0).font(.body.weight(.semibold))
+        let isOpen = model[keyPath: expanded]
+        let first = items.count <= 4 ? items : items.filter { $0.id == selected }
+        let rest = items.count <= 4 || !isOpen ? [] : items.filter { $0.id != selected }
+        let moreID = expanded == \AppModel.serversExpanded ? Panel.moreRows.servers : Panel.moreRows.routing
+        func row(_ c: (id: UUID, name: String, detail: String)) -> some View {
+            Button { select(c.id) } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(c.id == selected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(c.id == selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.quaternary)))
+                    VStack(alignment: .leading, spacing: 0) {
                         Text(c.name).lineLimit(1)
-                        Spacer()
-                        if names[c.name]!.count > 1 { Text(c.detail).foregroundStyle(.secondary).lineLimit(1) }
+                        if c.id == selected, let status { Text(status).font(.caption).foregroundStyle(.secondary) }
                     }
+                    Spacer()
+                    if names[c.name]!.count > 1 { Text(c.detail).foregroundStyle(.secondary).lineLimit(1) }
                 }
-                .buttonStyle(RowStyle(highlighted: model.hovered == c.id))
-                .onHover { model.hovered = $0 ? c.id : (model.hovered == c.id ? nil : model.hovered) }
-                .contextMenu { Button("Remove “\(c.name)”…", role: .destructive) { remove(c.id) } }
             }
+            .buttonStyle(RowStyle(highlighted: model.hovered == c.id))
+            .onHover { model.hovered = $0 ? c.id : (model.hovered == c.id ? nil : model.hovered) }
+            .contextMenu { Button("Remove “\(c.name)”…", role: .destructive) { remove(c.id) } }
+        }
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(first, id: \.id) { row($0) }
             if items.count > 4 {
-                Menu(more) {
-                    ForEach(items.filter { $0.id != selected }, id: \.id) { c in
-                        Button(names[c.name]!.count > 1 ? "\(c.name)  \(c.detail)" : c.name) { select(c.id) }
+                Button { model[keyPath: expanded].toggle() } label: {
+                    HStack {
+                        Text(more)
+                        Spacer()
+                        Image(systemName: "chevron.right").rotationEffect(.degrees(isOpen ? 90 : 0))
+                            .foregroundStyle(.secondary).font(.caption.weight(.semibold))
                     }
                 }
-                .menuStyle(.borderlessButton).fixedSize().padding(.horizontal, 8).padding(.vertical, 4)
+                .buttonStyle(RowStyle(highlighted: model.hovered == moreID))
+                .onHover { model.hovered = $0 ? moreID : nil }
             }
+            ForEach(rest, id: \.id) { row($0) }
         }
     }
 
@@ -171,10 +184,33 @@ struct RowStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 7).padding(.vertical, 3)
+            .frame(maxWidth: .infinity, minHeight: 26, alignment: .leading)
             .contentShape(Rectangle())
             .background(highlighted || configuration.isPressed ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear),
                         in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+/// The translucent, blurred material of the system's menu bar panels. MenuBarExtra's own
+/// background follows the window's active state, and a menu bar app's window is rarely
+/// active, so it looked opaque; this one stays active.
+struct Blur: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = TransparentWindowEffect()
+        view.material = .menu
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+
+    private final class TransparentWindowEffect: NSVisualEffectView {
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            window?.isOpaque = false
+            window?.backgroundColor = .clear
+        }
     }
 }

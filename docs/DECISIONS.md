@@ -331,3 +331,19 @@ in the panel instead of an alert.
 → No `@State`: in the macOS 27 SDK it is a macro whose plugin the Command Line Tools lack, so
 the App holds the model as a constant and row hover lives in the model.
 → App size budget 1400 → 1500 (1443 now).
+
+## D30. Panel styled after the system's Wi-Fi/Bluetooth modules; a knowing HIG deviation (2026-09-21)
+
+The HIG (The menu bar › Menu bar extras) says: "Display a menu — not a popover — when people
+click your menu bar extra. Unless the app functionality you want to expose is too complex for a
+menu, avoid presenting it in a popover." XrayBar deviates on purpose (D29: the author wants to
+pick a server and routing set without the menu closing each time), so the panel copies the
+closest system precedent, the Wi-Fi and Bluetooth modules, instead of inventing a look:
+→ title with a switch; rows with a 26 pt round icon, blue for the one in use (no checkmarks),
+the connection state under the selected server; "Other …" rows with a chevron that expand in
+place below the list; a plain "XrayBar Options" row at the bottom (the "Wi-Fi Settings…"
+position) opening the menu with everything else.
+→ Background: `NSVisualEffectView` with the `.menu` material, blending behind the window and
+kept active; MenuBarExtra's own background follows window activity and looked opaque.
+→ Reference for visuals: Apple Design Resources (macOS UI kit). If a future macOS restyles its
+modules, follow it; the HIG's own preference, a plain menu, remains the fallback.

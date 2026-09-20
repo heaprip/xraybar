@@ -18,6 +18,9 @@ final class AppModel {
     private(set) var tick = 0
     /// The panel row under the pointer (kept here: the panel has no @State, see App.swift).
     var hovered: UUID?
+    /// Whether "Other Servers" / "Other Routing Sets" are expanded in the panel.
+    var serversExpanded = false
+    var routingExpanded = false
     @ObservationIgnored let session = Session()
 
     init() {
