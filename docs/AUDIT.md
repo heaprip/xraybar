@@ -42,7 +42,7 @@ For each item, answer yes/no with evidence:
 - [ ] Arguments passed to the script are quoted/validated; no user-controlled string is
       interpolated into a shell command unescaped (profile names, paths, server addresses).
 - [ ] As root, the script only: creates `/var/run/xraybar` and `/var/db/xraybar`, copies the config, starts
-      xray, changes DNS of the active network service, signals the PID it started,
+      xray, changes DNS of the active network service (and of the next one after a network switch), signals the PID it started,
       restores DNS. It does not install files elsewhere, persist itself, or modify
       sudoers, launchd, `/etc` or other users' data.
 - [ ] Root runs only an xray from its own root-owned store (`/Library/Application Support/XrayBar/xray`),

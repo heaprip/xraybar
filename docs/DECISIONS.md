@@ -483,3 +483,20 @@ covered by reconnecting (network switches are not handled yet, README).
 → Not verified on a real IPv6 network yet: the author's home network has only ULA addresses,
 where nothing changes. To test: connect via a hotspot with IPv6, then
 `curl -6 https://ifconfig.co` should show the server's address (or fail), not the ISP's.
+
+## D41. The DNS override follows a network switch (2026-09-21)
+
+The session set DNS on the service that was primary at Connect (D3). After a switch, say from
+Wi-Fi to Ethernet or to a hotspot on another service, the new primary service kept its own DNS
+servers, usually the router's: on the local network and therefore routed outside the tunnel,
+so every name lookup leaked to the local network and ISP.
+→ The session's wait loop compares the default route's interface every second (one `route`
+call; `networksetup` only when it changed). When another interface with a network service
+takes over, it restores the old service's DNS and overrides the new one's, recording it in
+`dns.saved` as before, so restore after a crash still knows which service to fix. With no
+default route (network down) nothing changes until one appears.
+→ Considered: a non-persistent override through `scutil` (`State:/Network/Service/…/DNS`),
+which is what VPN clients usually do and which a reboot clears by itself. It changes how DNS
+is set and restored everywhere, so it waits for a session that can be tested live; this change
+reuses the existing, tested set/restore functions.
+→ Not verified live yet (README: network switches). Root-script budget is at its 250 limit.

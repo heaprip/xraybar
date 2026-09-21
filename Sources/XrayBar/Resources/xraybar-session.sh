@@ -8,7 +8,7 @@
 #
 # Root writes only /var/run/xraybar (session files, gone at reboot), /var/db/xraybar (the
 # saved DNS, which must survive a power loss) and the DNS setting of the active network
-# service. The stop file is only tested for existence (the app creates and removes it).
+# service (moved to the new one when the network switches). The stop file is only tested for existence (the app creates and removes it).
 #
 # <xray> must be a root-owned version from xraybar-install.sh --xray; the config's log section
 # is replaced by root. Everything else in the config is the user's choice (their servers).
@@ -37,10 +37,13 @@ fail() { log "$*"; echo "$*" >&2; exit 1; }
 alive() { [[ -f $1 ]] && kill -0 "$(cat "$1")" 2>/dev/null; }
 
 # --- DNS -----------------------------------------------------------------------------
+# The interface of the default route (Xray's own routes are narrower, so it stays physical).
+default_device() { route -n get default 2>/dev/null | awk '/interface:/ {print $2}'; }
+
 # The network service (e.g. "Wi-Fi") that owns the default route's interface.
 active_service() {
     local dev
-    dev=$(route -n get default 2>/dev/null | awk '/interface:/ {print $2}')
+    dev=$(default_device)
     networksetup -listnetworkserviceorder | awk -v dev="$dev" '
         /^\([0-9*]+\) / { sub(/^\([0-9*]+\) /, ""); name = $0 }
         index($0, "Device: " dev ")") { print name; exit }'
@@ -155,8 +158,16 @@ done
 [[ -n $routed ]] || fail "xray started but installed no routes (too old for native TUN on macOS?)"
 set_dns
 
+# The DNS override follows network switches: a new primary service's DNS would bypass the tunnel (D41).
+dev=$(default_device)
 while kill -0 "$XPID" 2>/dev/null && kill -0 "$APP_PID" 2>/dev/null && [[ ! -e $STOP ]]; do
     sleep 1
+    now=$(default_device)
+    [[ -n $now && $now != "$dev" && -n $(active_service) ]] || continue
+    log "default route moved from ${dev:-nothing} to $now"
+    dev=$now
+    restore_dns
+    set_dns
 done
 exit 0
 }
