@@ -34,7 +34,7 @@ or both. XrayBar does one thing and tries to do it the way Apple would:
 a menu like Wi-Fi's, a password prompt when it needs root, and nothing left behind
 when you disconnect. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md).
 
-## Build and run
+## Build and install
 
 Requirements: macOS 15+, Command Line Tools (`xcode-select --install`). No Xcode.
 
@@ -45,21 +45,31 @@ cp -R build/XrayBar.app /Applications/       # then open it from /Applications
 
 For development, `swift run` works too.
 
-**Xray Version ›** downloads the Xray release tested with XrayBar, or any newer one; versions
-stay installed side by side, and the first connection with a new one is checked, with a
-one-click switch back if no traffic passes. **Update Routing Data** fetches
-`geoip.dat`/`geosite.dat`. Everything is checksum-verified. Until then an existing v2rayN
-install is used (`~/Library/Application Support/v2rayN/bin`). Import servers with
-**Import Link or QR Code from Clipboard** (copy a `vless://…` link, or press ⌘⇧⌃4 and select a
-QR code — the screenshot goes to the clipboard), or **Import from v2rayN…** (read-only).
-**Share Server…** shows a QR code. Hold **Option** with the menu open to remove a server or routing set, copy the server link, or
-see technical details under the status line. With **Connect at Launch** (on by default) XrayBar
-connects to the last used server when it starts; pair it with **Open at Login**.
+## Getting started
 
-Connect asks for your administrator password: creating a TUN interface needs root.
-**Use Touch ID to Connect…** installs a small root-owned helper once; after that each Connect
-asks for Touch ID (or the password) in a system dialog. Only short, readable code runs as root:
-[`Sources/XrayBar/Resources/xraybar-session.sh`](Sources/XrayBar/Resources/xraybar-session.sh).
+1. **Add a server.** *Import Link or QR Code from Clipboard*: copy a `vless://…` link, or press
+   ⌘⇧⌃4 and select a QR code (the screenshot goes to the clipboard). Or *Import from v2rayN…*
+   (read-only).
+2. **Get Xray and routing data.** *Xray › Download v26.9.9* and *Update Routing Data*
+   (checksum-verified). Until then XrayBar uses an existing v2rayN install.
+3. **Connect.** macOS asks for your administrator password: a TUN interface needs root.
+   *Use Touch ID to Connect…* installs a small root-owned helper once; after that, Touch ID.
+4. **Forget about it.** *Connect at Launch* (on by default) plus *Open at Login*: the Mac starts,
+   you touch the sensor, you're connected.
+
+## The menu
+
+| Item | What it does |
+|---|---|
+| Server, Routing | Choose the server and routing set (routing sets use v2rayN's format) |
+| Share Server… | The selected server as a QR code |
+| Xray › | Versions side by side; a new version's first connection is checked, with a one-click switch back. Routing data source and update. *Exclude from Tunnel…* for networks that must bypass Xray |
+| Diagnostics › | Log, detailed log, data folder, uninstall the helper |
+| **Option** held | *Remove* a server or routing set · *Copy Server Link* · technical details under the status line |
+
+Only short, readable code runs as root: [the session script](Sources/XrayBar/Resources/xraybar-session.sh),
+[the install script](Sources/XrayBar/Resources/xraybar-install.sh) and the optional
+[helper](Sources/XrayBarHelper/main.swift).
 
 ## Can I trust it?
 
