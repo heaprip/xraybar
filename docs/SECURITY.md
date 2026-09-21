@@ -48,6 +48,9 @@ Does not protect against (known limitations, stage 1):
   release that was tested, not that it is benign. You can build Xray from source with Go
   and compare. Routing data is checked only against its same-origin checksum.
 - Traffic analysis or anything outside Xray's own security properties.
+- Mistakes nobody has caught yet: the code was written by an AI agent directed by an author
+  who is not a macOS developer, and no independent expert has reviewed it (README, "How this
+  was built").
 
 ## About the app bundle
 

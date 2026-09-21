@@ -6,7 +6,26 @@ A small, native macOS menu-bar app that runs [Xray-core](https://github.com/XTLS
 with its **native TUN**: all traffic, routed by geosite/geoip rules, through one process,
 with nothing else in between.
 
-> Status: early. Stage 1 (connect from the menu) works; see [docs/ROADMAP.md](docs/ROADMAP.md).
+> Status: early, stages 1–3 of [docs/ROADMAP.md](docs/ROADMAP.md) mostly done; used daily by the author.
+
+## How this was built — read this first
+
+XrayBar was written almost entirely by an AI coding agent (Claude Code), directed by the
+author in conversation: what is often called *vibe coding*. The author is **not a Swift or
+macOS developer** and does not know Apple's development practices (Swift, SwiftUI/AppKit,
+the SDKs, signing, launchd) well enough to judge the code as an expert would.
+
+What the author did: decided what the app should and should not do, insisted on a small,
+auditable design, and tested every step on a real Mac (macOS 26) with real servers. What was
+done to make up for the missing expertise: every decision and its evidence is written down
+([docs/DECISIONS.md](docs/DECISIONS.md)), including the mistakes; the code is small and meant to
+be read in order; there are tests and a deterministic audit script ([scripts/audit.sh](scripts/audit.sh)).
+
+What it means for you: **no experienced macOS engineer has reviewed this code.** It may be
+unidiomatic, and it may be wrong in ways neither the author nor the AI noticed. Treat it as
+you would any unreviewed code that asks for your administrator password: read it or have it
+reviewed ([docs/AUDIT.md](docs/AUDIT.md)) before you trust it. Reviews and issues from people who
+know the platform are very welcome.
 
 ## Why
 
