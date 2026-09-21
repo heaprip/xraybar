@@ -9,10 +9,19 @@
 //   {"action": "restore"}
 //       Runs the session script's clean-up after a session that died. No authorization needed.
 // Everything it runs as root lives in /Library/Application Support/XrayBar, owned by root.
+//
+// `XrayBarHelper --watch <stop-file> <pid>...` is a second, separate use: the session script
+// runs it (as its child, also without the installed helper) to wait for events instead of
+// polling (D42). It only observes and prints; it changes nothing.
 
 import Darwin
 import Foundation
 import Security
+import SystemConfiguration
+
+if CommandLine.arguments.count >= 3, CommandLine.arguments[1] == "--watch" {
+    watch(stopFile: CommandLine.arguments[2], pids: CommandLine.arguments.dropFirst(3).compactMap { pid_t($0) })
+}
 
 let script = "/Library/Application Support/XrayBar/xraybar-session.sh"
 let right = "io.github.heaprip.xraybar.connect"
@@ -122,4 +131,43 @@ func readAll(_ socket: Int32) -> Data {
 func reply(_ socket: Int32, _ object: [String: Any]) {
     guard let data = try? JSONSerialization.data(withJSONObject: object) else { return }
     data.withUnsafeBytes { _ = write(socket, $0.baseAddress, $0.count) }
+}
+
+// MARK: Watch (for the session script; D42)
+
+/// One line per event on stdout: "network" when the primary network changes (a switch, or
+/// the link coming back after sleep); then, ending the watch, "stop" when the stop file
+/// appears or "exit <pid>" when a watched process ends.
+func watch(stopFile: String, pids: [pid_t]) -> Never {
+    var sources: [DispatchSourceProtocol] = []
+    for pid in pids {
+        let exited = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
+        exited.setEventHandler { finish("exit \(pid)") }
+        exited.resume()
+        sources.append(exited)
+        if kill(pid, 0) != 0 && errno == ESRCH { finish("exit \(pid)") }   // gone before the watch began
+    }
+
+    let folder = open((stopFile as NSString).deletingLastPathComponent, O_EVTONLY)
+    guard folder >= 0 else { finish("error: cannot watch \(stopFile)") }
+    let stop = DispatchSource.makeFileSystemObjectSource(fileDescriptor: folder, eventMask: .write, queue: .main)
+    stop.setEventHandler { if access(stopFile, F_OK) == 0 { finish("stop") } }
+    stop.resume()
+    sources.append(stop)
+    if access(stopFile, F_OK) == 0 { finish("stop") }
+
+    // configd publishes the primary service here; it changes when the network does.
+    guard let store = SCDynamicStoreCreate(nil, "XrayBarHelper" as CFString, { _, _, _ in say("network") }, nil),
+          SCDynamicStoreSetNotificationKeys(store, ["State:/Network/Global/IPv4"] as CFArray, nil),
+          SCDynamicStoreSetDispatchQueue(store, .main)
+    else { finish("error: cannot watch the network") }
+    withExtendedLifetime((sources, store)) { dispatchMain() }
+}
+
+/// Unbuffered, so the script sees each line at once; if the script is gone, SIGPIPE ends us.
+func say(_ line: String) { FileHandle.standardOutput.write(Data((line + "\n").utf8)) }
+
+func finish(_ line: String) -> Never {
+    say(line)
+    exit(0)
 }

@@ -500,3 +500,37 @@ which is what VPN clients usually do and which a reboot clears by itself. It cha
 is set and restored everywhere, so it waits for a session that can be tested live; this change
 reuses the existing, tested set/restore functions.
 → Not verified live yet (README: network switches). Root-script budget is at its 250 limit.
+
+## D42. Events instead of polling; sleep and wake (2026-09-21)
+
+The root session checked xray, the app and the stop file once a second (`sleep 1`), and D41
+added a `route` call to that loop; the app read the pid file once a second as well. The author
+expected an event-driven design, as macOS provides one, and asked for sleep/wake handling too.
+
+What happens across sleep, wake and network switches, from Xray v26.9.9's source
+(`proxy/tun/tun_darwin.go`): with `autoOutboundsInterface`, Xray listens on a routing socket
+and picks the physical interface again on every route change, so its own traffic follows a
+new network and the link coming back after wake. Its routes stay on the utun. What XrayBar
+itself must do is move the DNS override (D41) and notice when a session ends.
+
+→ `XrayBarHelper --watch <stop-file> <pid>...`: the helper binary gets a second mode that only
+observes and prints one line per event: `network` (SCDynamicStore notification on
+`State:/Network/Global/IPv4`, which configd rewrites when the primary service changes),
+`stop` (a vnode watch on the stop file's folder), `exit <pid>` (kqueue `NOTE_EXIT` for xray,
+the app and the session script itself). The session script reads these lines and keeps every
+action (DNS, stopping xray) in bash. If the watcher dies, the session ends and cleans up.
+→ The script runs the watcher next to itself: the root-owned copy in `/Library/Application
+Support/XrayBar` when the helper started the session, else the one in the app bundle (the
+same trust as the bundled script). The watcher therefore runs as root in every session.
+→ The app: while connected, disconnected or failed nothing runs; kqueue reports when xray or
+the session ends (watching a root process needs no rights over it and sends it nothing,
+checked on this Mac). Only the short connecting/disconnecting states are checked every 0.5 s.
+A session found without its script while connected now offers Restore (it only did so while
+disconnecting). Exits during sleep are delivered on wake.
+→ Sleep and wake need nothing of their own: on wake the link returns, configd republishes the
+primary service, the watcher reports `network`, and the log records it
+(`network: en0 -> none`, `none -> en0`) for diagnosis. Not verified live yet.
+→ Known gap: a session started outside this app instance while it shows Not Connected is
+noticed at the next launch, not at once (before: within a second).
+→ Budgets: helper 150 → 180 lines, root scripts 250 → 270.
+→ The behaviour across sleep/wake and network switches still needs a live check (README).

@@ -19,17 +19,40 @@ final class Session {
 
     private(set) var state: State = .disconnected
     var onChange: () -> Void = {}
+    /// Checks the short transitions (connecting, disconnecting) twice a second.
     private var timer: Timer?
+    /// Otherwise kqueue reports when xray or its session ends; nothing runs meanwhile (D42).
+    private var exits: [DispatchSourceProcess] = []
     private var connectStarted = Date.distantPast
     /// Set by `reconnect`: connect again with this library once the old session is gone.
     private var pendingConnect: Library?
 
     init() {
         if Self.runningPID() != nil { state = .connected }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            MainActor.assumeIsolated { self.poll() }
+        track()
+    }
+
+    /// Watching a process needs no rights over it (root's xray included) and sends it nothing.
+    /// Events that happen during sleep are delivered on wake.
+    private func track() {
+        timer?.invalidate()
+        exits.forEach { $0.cancel() }
+        exits = []
+        switch state {
+        case .connecting, .disconnecting:
+            timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                MainActor.assumeIsolated { self.poll() }
+            }
+            timer?.tolerance = 0.2
+        case .connected, .disconnected, .failed:
+            for pid in [Self.runningPID(), Self.pid(in: Store.sessionPidFile)].compactMap({ $0 }) {
+                let exit = DispatchSource.makeProcessSource(identifier: pid, eventMask: .exit, queue: .main)
+                exit.setEventHandler { MainActor.assumeIsolated { self.poll() } }
+                exit.resume()
+                exits.append(exit)
+            }
+            DispatchQueue.main.async { self.poll() }   // one may have ended before it was watched
         }
-        timer?.tolerance = 0.5   // lets macOS batch the wakeups
     }
 
     // MARK: Connect
@@ -230,7 +253,7 @@ final class Session {
             try? FileManager.default.removeItem(at: Store.stopFile)
             set(.disconnected)
             if let library = pendingConnect { pendingConnect = nil; connect(library) }
-        case .disconnecting where Self.needsRestore:
+        case .connected where Self.needsRestore, .disconnecting where Self.needsRestore:
             fail("The session stopped responding. Use Restore Network Settings in the menu.")
         case .disconnected where running, .failed where running:
             set(.connected)   // e.g. connected before this app instance started
@@ -242,6 +265,7 @@ final class Session {
     private func set(_ new: State) {
         guard new != state else { return }
         state = new
+        track()
         onChange()
     }
 

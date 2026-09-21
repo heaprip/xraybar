@@ -76,14 +76,15 @@ For development, `swift run` works too.
 | **Option** held | *Remove* a server or routing set · *Copy Server Link* · technical details under the status line |
 
 Only short, readable code runs as root: [the session script](Sources/XrayBar/Resources/xraybar-session.sh),
-[the install script](Sources/XrayBar/Resources/xraybar-install.sh) and the optional
-[helper](Sources/XrayBarHelper/main.swift).
+[the install script](Sources/XrayBar/Resources/xraybar-install.sh) and
+[the helper](Sources/XrayBarHelper/main.swift): the session uses its event watch (it only
+observes), and its Touch ID service is optional.
 
 ## Can I trust it?
 
 You shouldn't have to take anyone's word for it. The app is ~1,500 lines of Swift in a handful of
-numbered files meant to be read in order, plus ~250 lines of root scripts and an optional
-~110-line root helper, with zero dependencies.
+numbered files meant to be read in order, plus ~260 lines of root scripts and a
+~150-line root helper, with zero dependencies.
 
 - [docs/SECURITY.md](docs/SECURITY.md) — what it does, threat model, known limitations.
 - `scripts/audit.sh` — deterministic inventory of privilege, processes, network, file writes.

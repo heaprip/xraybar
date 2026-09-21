@@ -9,7 +9,8 @@ Read `docs/PRINCIPLES.md` first. The short version:
   code we would write; pin an exact version and list it in docs/SECURITY.md. It must build
   with the Command Line Tools (no Xcode-only macro plugins such as `@State` on SDK 27 or `#Preview`).
 - **Root lives in one place:** `Sources/XrayBar/Resources/xraybar-session.sh`. Anything that
-  needs root goes there, validated, and nowhere else. Never signal a PID the session did not
+  needs root goes there, validated, and nowhere else. (The install script installs; the helper
+  authorizes and starts the session, and its `--watch` mode only observes and reports events.) Never signal a PID the session did not
   start; never find processes by name or pattern.
 - **No network I/O in the app** unless the user explicitly started it (future asset updates),
   and then only from one documented place.

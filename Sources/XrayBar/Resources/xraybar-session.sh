@@ -2,7 +2,7 @@
 # XrayBar privileged session. This is ALL the code XrayBar runs as root.
 #
 # Started once per Connect through the macOS administrator prompt (docs/DECISIONS.md D4).
-# Lifetime: copy config -> start xray -> set DNS -> wait -> stop xray -> restore DNS.
+# Lifetime: copy config -> start xray -> set DNS -> wait for events -> stop xray -> restore DNS.
 # It ends when the stop file appears, when the XrayBar app exits, or when xray exits,
 # so nothing is ever left running or half-configured.
 #
@@ -28,7 +28,8 @@ LOG=$RUN/xray.log
 PIDFILE=$RUN/xray.pid          # xray started by the current session
 SESSION_PIDFILE=$RUN/session.pid
 STATE=/var/db/xraybar
-XRAY_STORE="/Library/Application Support/XrayBar/xray"   # root-owned xray versions
+INSTALLED="/Library/Application Support/XrayBar"          # the helper's root-owned copies
+XRAY_STORE=$INSTALLED/xray                                 # root-owned xray versions
 DNS_SAVED=$STATE/dns.saved     # "service<TAB>previous servers" while DNS is overridden
 
 install -d -o root -g wheel -m 755 "$RUN" "$STATE"
@@ -116,6 +117,13 @@ tag=${XRAY#"$XRAY_STORE"/}; tag=${tag%/xray}
     || fail "xray must be a version installed by XrayBar (in $XRAY_STORE): $XRAY"
 [[ -f $XRAY && ! -L $XRAY && $(stat -f %Su:%Lp "$XRAY") == root:755 && $(stat -f %Su "$XRAY_STORE") == root ]] \
     || fail "xray is not root-owned: $XRAY"
+# The event watcher (XrayBarHelper --watch, D42) sits next to this script: the root-owned copy
+# when the helper runs us, else in the app bundle (or SwiftPM's build folder) we came from.
+here=$(cd "$(dirname "$0")" && pwd)
+WATCH=$INSTALLED/XrayBarHelper
+[[ $here == "$INSTALLED" ]] || WATCH=$here/../../../../MacOS/XrayBarHelper
+[[ $here == "$INSTALLED" || -x $WATCH ]] || WATCH=$here/../../../XrayBarHelper
+[[ -x $WATCH ]]            || fail "XrayBarHelper not found next to $0"
 [[ -d $ASSETS ]]           || fail "assets directory not found: $ASSETS"
 [[ -f $CONFIG ]]           || fail "config not found: $CONFIG"
 [[ $APP_PID =~ ^[0-9]+$ ]] || fail "bad app pid"
@@ -158,16 +166,19 @@ done
 [[ -n $routed ]] || fail "xray started but installed no routes (too old for native TUN on macOS?)"
 set_dns
 
-# The DNS override follows network switches: a new primary service's DNS would bypass the tunnel (D41).
-dev=$(default_device)
-while kill -0 "$XPID" 2>/dev/null && kill -0 "$APP_PID" 2>/dev/null && [[ ! -e $STOP ]]; do
-    sleep 1
+# Wait for events, no polling (D42): the stop file, xray, the app or this script ending ends
+# the session. The DNS override follows network switches, since a new primary service's
+# own DNS would bypass the tunnel (D41); with no network (asleep, say) nothing changes.
+dev=$(default_device) seen=$dev
+while read -r event && [[ $event == network ]]; do
     now=$(default_device)
+    [[ $now == "$seen" ]] || log "network: ${seen:-none} -> ${now:-none}"
+    seen=$now
     [[ -n $now && $now != "$dev" && -n $(active_service) ]] || continue
-    log "default route moved from ${dev:-nothing} to $now"
     dev=$now
     restore_dns
     set_dns
-done
+done < <("$WATCH" --watch "$STOP" "$XPID" "$APP_PID" $$)
+log "session ends: ${event:-event watch ended}"
 exit 0
 }

@@ -5,8 +5,8 @@ set -u
 cd "$(dirname "$0")/.."
 
 SWIFT_BUDGET=1600   # lines in Sources/XrayBar, excluding blank lines (1200 → 1400 D23 → 1500 D29 → 1600 D31)
-HELPER_BUDGET=150   # lines in the root helper (Sources/XrayBarHelper), excluding blank lines
-SHELL_BUDGET=250    # lines in the root scripts (session + install), excluding blank lines (220 → 250 D38)
+HELPER_BUDGET=180   # lines in the root helper (Sources/XrayBarHelper), excluding blank lines (150 → 180 D42)
+SHELL_BUDGET=270    # lines in the root scripts (session + install), excluding blank lines (220 → 250 D38 → 270 D42)
 
 section() { printf '\n== %s\n' "$1"; }
 find_code() { grep -rnE "$1" Sources --include='*.swift' --include='*.sh' || echo "  (none)"; }

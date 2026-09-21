@@ -46,7 +46,8 @@ kitchen sinks or look and behave nothing like a Mac app.
    follow over layers, protocols and dependency injection. Split code only along
    real boundaries: UI, config generation, privileged execution.
 4. **Privilege is tiny and visible.** Everything that runs as root is the session script,
-   the install script and the optional helper, each short, with a fixed set of actions.
+   the install script and the helper (its event watch only observes; its Touch ID service is
+   optional), each short, with a fixed set of actions.
 5. **Compatible, not copied.** Where v2rayN already got behaviour right (TUN inbound,
    rule expansion, DNS split) or defined a format people use (routing sets), XrayBar
    matches that behaviour and format, implemented from scratch. v2rayN is GPL-3.0 and
