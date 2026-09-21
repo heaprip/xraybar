@@ -32,8 +32,16 @@ rm -rf "$(dirname "$iconset")"
 
 # Ad-hoc signature: seals the bundle so any later change to it (including the root script)
 # is detectable with `codesign --verify`. Not a Developer ID; see docs/SECURITY.md.
+# Inside out: the helper first (a universal binary is not signed by the linker), then the app.
+codesign --force --sign - "$app/Contents/MacOS/XrayBarHelper"
 codesign --force --sign - "$app"
 codesign --verify --strict "$app"
+# Every architecture must run on the macOS that Info.plist promises (a toolchain may default higher).
+min=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$app/Contents/Info.plist")
+for b in "$app"/Contents/MacOS/*; do
+    vtool -show-build "$b" | awk -v m="$min" '$1 == "minos" && $2 != m {bad=1} END {exit bad}' \
+        || { echo "$b: minimum macOS is not $min"; exit 1; }
+done
 # The session script finds the event watcher at this path (D42); fail here, not at Connect.
 res="$app/Contents/Resources/XrayBar_XrayBar.bundle/Contents/Resources"
 [[ -f $res/xraybar-session.sh && -x $res/../../../../MacOS/XrayBarHelper ]] || { echo "unexpected bundle layout"; exit 1; }
