@@ -635,7 +635,9 @@ Until now releases were source only ("build it yourself"). The author expects th
 will build it and wants a download, as with most software they use from GitHub. There is no
 Developer ID and none is planned (no App Store either).
 → `.github/workflows/ci.yml`: every push to main and every pull request builds, runs the tests,
-`audit.sh`, shellcheck on the root scripts, and `make-app.sh`, on GitHub's macOS 26 runner.
+`audit.sh`, shellcheck on the root scripts, and `make-app.sh`, on GitHub's `xcode-27` image
+(Swift 6.4, like the current Command Line Tools). The default macOS 26 image's Swift 6.3.3
+(Xcode 26.6) crashed compiling the menu (signal 6 in swift-frontend), in the first CI run.
 → `.github/workflows/release.yml`: a tag `vX.Y.Z` (it must match `CFBundleShortVersionString`)
 builds a universal app (`UNIVERSAL=1 make-app.sh`, Apple silicon + Intel, needs Xcode, which
 the runner has), packages `XrayBar-x.y.z.pkg` (installs into /Applications; not relocatable, so
