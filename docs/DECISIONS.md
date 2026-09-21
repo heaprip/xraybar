@@ -607,7 +607,9 @@ sets `CFBundleVersion` to the commit count, so every build is distinct ("0.2.0 (
 files. (Launched while one runs, nothing appears; quit the running one first.)
 → `os.Logger`, subsystem `io.github.heaprip.xraybar`: state changes, every alert shown, and the
 keychain falling back to the file. Titles are public, dynamic text private (redacted unless
-private data logging is enabled), since messages can name servers.
+private data logging is enabled), since messages can name servers. State changes are logged at
+`notice`, not `info`: `log stream` hides info by default and macOS keeps info only in memory,
+so the first version's state lines were invisible to the author and gone by the next morning.
 
 ## D47. Russian UI; the English text is the key (2026-09-21)
 
