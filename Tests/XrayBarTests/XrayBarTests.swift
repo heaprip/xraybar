@@ -99,6 +99,18 @@ import Testing
         #expect(try XrayConfig.data(rest) == XrayConfig.data(original))
     }
 
+    /// With a global IPv6 address, IPv6 is routed into the tunnel too; exclusions stay IPv4 (D40).
+    @Test func ipv6RoutedWhenPresent() throws {
+        var s = Settings(); s.routeExclusions = ["10.0.0.0/8"]
+        let tun = { (ipv6: Bool) in
+            ((XrayConfig.make(profile: profile, routing: .global, settings: s, ipv6: ipv6)["inbounds"] as? [[String: Any]])?
+                .first?["settings"] as? [String: Any])?["autoSystemRoutingTable"] as? [String] ?? []
+        }
+        #expect(tun(true).last == "::/0" && tun(true).count == tun(false).count + 1)
+        #expect(!tun(false).contains { $0.contains(":") })
+        _ = Session.hasGlobalIPv6()   // reads the interfaces without crashing
+    }
+
     @Test func validationCopyHasNoTun() {
         let c = XrayConfig.validationCopy(XrayConfig.make(profile: profile, routing: .global, settings: Settings()))
         #expect((c["inbounds"] as? [[String: Any]])?.first?["protocol"] as? String == "socks")

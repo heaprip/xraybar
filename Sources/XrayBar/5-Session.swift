@@ -45,7 +45,7 @@ final class Session {
                         + "Turn it off, then connect again.")
         }
         let s = library.settings
-        let config = XrayConfig.make(profile: profile, routing: library.routing, settings: s)
+        let config = XrayConfig.make(profile: profile, routing: library.routing, settings: s, ipv6: Self.hasGlobalIPv6())
         connectStarted = .distantFuture   // no start timeout while validating or waiting for Touch ID
         set(.connecting)
         Task {
@@ -180,6 +180,23 @@ final class Session {
         let interface = text.split(separator: "\n").first { $0.contains("interface:") }?
             .split(separator: " ").last.map(String.init)
         return interface?.hasPrefix("utun") == true ? interface : nil
+    }
+
+    /// A globally routable IPv6 address (2000::/3) on an interface that is up, not a tunnel.
+    /// Without one nothing can leak over IPv6, and IPv6 sent into the tunnel could not get out
+    /// (v2rayN decides the same way). If the interfaces cannot be read: assume one.
+    nonisolated static func hasGlobalIPv6() -> Bool {
+        var list: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&list) == 0, let first = list else { return true }
+        defer { freeifaddrs(list) }
+        return sequence(first: first, next: { $0.pointee.ifa_next }).contains {
+            let i = $0.pointee
+            guard let address = i.ifa_addr, address.pointee.sa_family == sa_family_t(AF_INET6),
+                  i.ifa_flags & UInt32(IFF_UP) != 0, i.ifa_flags & UInt32(IFF_LOOPBACK) == 0,
+                  !String(cString: i.ifa_name).hasPrefix("utun") else { return false }
+            let byte = address.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee.sin6_addr.__u6_addr.__u6_addr8.0 }
+            return byte & 0xE0 == 0x20
+        }
     }
 
     /// PID written by the root session, if that process is alive. `kill(pid, 0)` on a root

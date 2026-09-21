@@ -12,7 +12,7 @@ with nothing else in between.
 <p align="center"><sub>The menu, and the same menu with <b>Option</b> held (demo servers).</sub></p>
 
 > Status: early; used daily by the author. Not done yet: credentials in Keychain, IPv6 through
-> the tunnel, verified behaviour across sleep/wake and network switches, transports other than raw.
+> the tunnel verified on a real IPv6 network, verified behaviour across sleep/wake and network switches, transports other than raw.
 
 ## How this was built — read this first
 

@@ -466,3 +466,20 @@ counts from the privileged start, not from the click.
 → `AppModel` keeps what the menu shows from disk (installed versions, helper state, restore
 needed, login item) and refreshes it after each state change or action; `tick` is gone.
 → The 1 s status timer has 0.5 s tolerance, so macOS can coalesce its wakeups.
+
+## D40. IPv6 enters the tunnel when the Mac has a global IPv6 address (2026-09-21)
+
+The TUN routes were IPv4 only (`0.0.0.0/0`). On a network with global IPv6 (many mobile
+hotspots and ISPs) IPv6 followed the system's default route around Xray: a leak, for example
+from a browser with its own DNS-over-HTTPS resolver getting AAAA answers (the system DNS
+already returns none, `queryStrategy: UseIPv4`).
+→ At Connect, if an interface that is up, not loopback and not a utun holds an address in
+2000::/3, `autoSystemRoutingTable` gets `::/0` as well. Without one there is nothing to leak,
+and IPv6 sent into the tunnel could not get out, so it is left out. This is v2rayN's current
+behaviour (read in `.ref`, written from scratch): no IPv6 address on the TUN, only the route.
+IPv6 destinations are then routed by the same rules (proxy, direct or block).
+→ Route exclusions stay IPv4. The decision is taken at Connect; a network change later is
+covered by reconnecting (network switches are not handled yet, README).
+→ Not verified on a real IPv6 network yet: the author's home network has only ULA addresses,
+where nothing changes. To test: connect via a hotspot with IPv6, then
+`curl -6 https://ifconfig.co` should show the server's address (or fail), not the ISP's.

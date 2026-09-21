@@ -9,10 +9,11 @@ import Foundation
 enum XrayConfig {
     typealias JSON = [String: Any]
 
-    static func make(profile: Profile, routing: RoutingSet, settings: Settings) -> JSON {
+    /// `ipv6`: this Mac has a global IPv6 address, so IPv6 must enter the tunnel too (D40).
+    static func make(profile: Profile, routing: RoutingSet, settings: Settings, ipv6: Bool = false) -> JSON {
         [
             "log": log(settings),
-            "inbounds": [tunInbound(settings)],
+            "inbounds": [tunInbound(settings, ipv6: ipv6)],
             "outbounds": [
                 proxyOutbound(profile),
                 ["tag": "direct", "protocol": "freedom"],
@@ -36,7 +37,7 @@ enum XrayConfig {
 
     // MARK: TUN inbound
 
-    static func tunInbound(_ settings: Settings) -> JSON {
+    static func tunInbound(_ settings: Settings, ipv6: Bool = false) -> JSON {
         [
             "tag": "tun",
             "protocol": "tun",
@@ -44,9 +45,11 @@ enum XrayConfig {
                 "name": "utun77",
                 "MTU": settings.tunMTU,
                 "gateway": ["172.18.0.1/30"],
-                // Xray installs these routes itself. IPv4 only until IPv6 is verified (roadmap).
-                // Excluded networks are simply left out, so the system routes them as usual.
-                "autoSystemRoutingTable": CIDR.subtract(settings.routeExclusions ?? [], from: "0.0.0.0/0"),
+                // Xray installs these routes itself. Excluded (IPv4) networks are simply left out,
+                // so the system routes them as usual. With a global IPv6 address, ::/0 too: left
+                // out, IPv6 would follow the system's default route around the tunnel (D40).
+                "autoSystemRoutingTable": CIDR.subtract(settings.routeExclusions ?? [], from: "0.0.0.0/0")
+                    + (ipv6 ? ["::/0"] : []),
                 // Outbounds bind to the physical interface, so Xray's own traffic
                 // does not loop back into the tunnel (D2).
                 "autoOutboundsInterface": "auto",
