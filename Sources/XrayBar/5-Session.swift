@@ -288,14 +288,14 @@ enum Helper {
     static var bundledScript: URL? { Bundle.module.url(forResource: "xraybar-session", withExtension: "sh") }
 
     /// The installed copies differ from this app's (the app was updated), or the authorization
-    /// right predates D44 (it had a timeout of 0): offer to update.
+    /// right predates D44 (timeout 0; without the key macOS reports its default, INT32_MAX).
     static var outdated: Bool {
         guard installed, let script = bundledScript else { return false }
         var rule: CFDictionary?
         let right = AuthorizationRightGet("io.github.heaprip.xraybar.connect", &rule) == errAuthorizationSuccess
         return hash(bundledHelper.path) != hash(installedDir + "/XrayBarHelper")
             || hash(script.path) != hash(installedDir + "/xraybar-session.sh")
-            || !right || (rule as? [String: Any])?["timeout"] != nil
+            || !right || (rule as? [String: Any])?["timeout"] as? Int == 0
     }
 
     /// One authorization for the app's lifetime: the helper's check stores the credential in it

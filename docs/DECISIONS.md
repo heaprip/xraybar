@@ -567,7 +567,9 @@ authorization can, i.e. code inside the XrayBar process.
 → What an attacker running as the user gains: nothing new unless it gets into the XrayBar
 process; even then root runs only a root-owned xray with a root-written log section (D38).
 → `Helper.outdated` also reads the right (`AuthorizationRightGet`, no privileges needed): a
-right with a timeout means *Update Helper (Required)*, which rewrites it (D43).
+right with `timeout 0` means *Update Helper (Required)*, which rewrites it (D43). A rule
+written without the key reads back with macOS's default, 2147483647: the first version
+checked for any timeout and so asked for an update forever (found by the author).
 → Without the helper nothing changes: the administrator prompt comes on every Connect.
 → To verify live: after updating, Connect asks once; Disconnect and Connect, or choosing
 another server and Reconnect, do not ask; Quit and reopen asks again.
