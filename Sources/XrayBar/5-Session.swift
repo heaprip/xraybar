@@ -319,7 +319,7 @@ enum Helper {
         let connected = withUnsafePointer(to: &address) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
         }
-        guard connected == 0 else { throw failure("The helper is not running. Reinstall it: Diagnostics › Update Helper.") }
+        guard connected == 0 else { throw failure("The helper is not responding. Reinstall it: Diagnostics › Uninstall Helper, then Use Touch ID to Connect.") }
         let data = try JSONSerialization.data(withJSONObject: body)
         _ = data.withUnsafeBytes { write(fd, $0.baseAddress, $0.count) }
         shutdown(fd, SHUT_WR)

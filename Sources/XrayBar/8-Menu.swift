@@ -27,6 +27,9 @@ struct AppMenu: View {
         if model.needsRestore {
             Button("Restore Network Settings…", systemImage: "wrench.and.screwdriver", action: model.restore)
         }
+        if model.helperOutdated {   // near the top: until updated, root runs the old code (D43)
+            Button("Update Helper (Required)…", systemImage: "exclamationmark.triangle.fill", action: model.installHelper)
+        }
 
         Section("Server") {
             if model.library.profiles.isEmpty { Text("No servers — import one below") }
@@ -54,8 +57,6 @@ struct AppMenu: View {
         Menu("Diagnostics", systemImage: "stethoscope") { diagnosticsMenu }
         if !model.helperInstalled {
             Button("Use Touch ID to Connect…", systemImage: "touchid", action: model.installHelper)
-        } else if model.helperOutdated {
-            Button("Update Helper…", systemImage: "arrow.clockwise", action: model.installHelper)
         }
         Toggle("Connect at Launch", isOn: Binding(get: { model.connectsAtLaunch }, set: { _ in model.toggleConnectAtLaunch() }))
         if Bundle.main.bundlePath.hasSuffix(".app") {   // login items need an app bundle

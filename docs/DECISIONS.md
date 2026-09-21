@@ -538,3 +538,15 @@ A sleep that drops the link (on battery, longer) is not checked yet.
 noticed at the next launch, not at once (before: within a second).
 → Budgets: helper 150 → 180 lines, root scripts 250 → 270.
 → The behaviour across sleep/wake and network switches still needs a live check (README).
+
+## D43. An outdated helper is shown loudly and blocks Connect until updated (2026-09-21)
+
+After D38–D42 the author installed the new app, but the helper still ran its root-owned copy
+of the old session script: none of the root fixes applied, and the only hint was *Update
+Helper…* near the bottom of the menu.
+→ While the bundled helper or script differs from the installed copies: the menu bar icon is
+`exclamationmark.shield`; *Update Helper (Required)…* with a warning symbol sits right under
+Connect; Connect and Reconnect first ask to *Update and Connect* (one administrator prompt,
+then the usual Touch ID), and Cancel does not connect. Connect at Launch asks the same way.
+→ No way to connect through an outdated helper is offered: the reason to update is that root
+code changed. *Diagnostics › Uninstall Helper* still leads back to the password-per-Connect path.

@@ -67,7 +67,8 @@ final class AppModel {
     }
 
     var iconName: String {
-        switch state {
+        if helperOutdated { return "exclamationmark.shield" }   // root code is older than the app (D43)
+        return switch state {
         case .connected: "shield.fill"
         case .connecting, .disconnecting: "shield.lefthalf.filled"
         case .disconnected, .failed: "shield"
@@ -125,9 +126,24 @@ final class AppModel {
 
     // MARK: Actions
 
-    func connect() { session.connect(connectable) }
+    func connect() { if helperCurrent() { session.connect(connectable) } }
     func disconnect() { session.disconnect() }
-    func reconnect() { session.reconnect(connectable) }
+    func reconnect() { if helperCurrent() { session.reconnect(connectable) } }
+
+    /// An installed helper runs its own root-owned copy of the session script, so fixes in an
+    /// updated app do not reach root until the helper is updated too (D43). Connect asks first.
+    private func helperCurrent() -> Bool {
+        refresh()
+        guard helperOutdated else { return true }
+        NSApp.activate()
+        let a = Self.newAlert()
+        a.messageText = "Update the helper to connect"
+        a.informativeText = "This version of XrayBar changes the code that runs as root. Until the helper is "
+            + "updated, connecting would use its old copy. You will be asked for your password once."
+        a.addButton(withTitle: "Update and Connect")
+        a.addButton(withTitle: "Cancel")
+        return a.runModal() == .alertFirstButtonReturn && runHelperInstall()
+    }
     func restore() { session.restore(); refresh() }
 
     /// A previous session ended without cleaning up (power loss, crash of the root script).
@@ -347,7 +363,6 @@ final class AppModel {
     /// Installs (or updates) the root-owned helper: one administrator prompt now, then Connect
     /// asks for Touch ID or the password through the system dialog.
     func installHelper() {
-        guard let script = Helper.bundledScript else { return }
         NSApp.activate()
         let a = Self.newAlert()
         a.messageText = Helper.installed ? "Update the helper?" : "Use Touch ID to connect?"
@@ -356,14 +371,22 @@ final class AppModel {
             + "system dialog. Diagnostics › Uninstall Helper removes it. You will be asked for your password once now."
         a.addButton(withTitle: Helper.installed ? "Update" : "Install")
         a.addButton(withTitle: "Cancel")
-        guard a.runModal() == .alertFirstButtonReturn else { return }
+        guard a.runModal() == .alertFirstButtonReturn, runHelperInstall() else { return }
+        alert("Helper installed", "Connect now asks for Touch ID or your password.")
+    }
+
+    /// One administrator prompt; false if cancelled or failed (then with an alert).
+    private func runHelperInstall() -> Bool {
+        guard let script = Helper.bundledScript else { return false }
+        defer { refresh() }
         do {
             try session.runPrivileged([Helper.bundledHelper.path, script.path], detached: false, script: "xraybar-install")
-            refresh()
-            alert("Helper installed", "Connect now asks for Touch ID or your password.")
+            return true
         } catch is CancellationError {
+            return false
         } catch {
             alert("Could not install the helper", error.localizedDescription)
+            return false
         }
     }
 
