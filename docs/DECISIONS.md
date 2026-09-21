@@ -373,3 +373,10 @@ and our ButtonStyle's padding was lost. MacControlCenterUI builds its rows witho
 and `onHover` (the `row(height:highlighted:action:)` modifier), like the library.
 → SwiftPM under the CLT sometimes skipped a just-edited file ("Build complete (0.15 sec)"),
 so a release could contain old code. `make-app.sh` touches the sources before building.
+
+## D33. Closer to Wi-Fi: gray circles, hover-only disclosure, icons in the menu (2026-09-21)
+
+Compared side by side with the live Wi-Fi panel once rows had their real height (D32):
+→ Rows not in use sit on a gray circle (Wi-Fi's other networks), the one in use on a blue one.
+→ "Other …" is shaded only under the pointer, not while expanded.
+→ "XrayBar Options" items carry SF Symbols, as macOS 26 menus do (Karabiner, Battery).

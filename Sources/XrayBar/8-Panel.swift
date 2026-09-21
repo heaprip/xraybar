@@ -115,7 +115,7 @@ struct Panel: View {
                 Image(systemName: icon).resizable().scaledToFit().padding(6)
                     .foregroundStyle(c.id == selected ? AnyShapeStyle(.white) : AnyShapeStyle(.secondary))
                     .frame(width: Metrics.circle, height: Metrics.circle)
-                    .background(Circle().fill(c.id == selected ? Color.accentColor : .clear))
+                    .background(Circle().fill(c.id == selected ? Color.accentColor : Color.secondary.opacity(0.25)))
                 VStack(alignment: .leading, spacing: 0) {
                     Text(c.name).lineLimit(1)
                     if c.id == selected, let status { Text(status).font(.caption).foregroundStyle(.secondary) }
@@ -137,7 +137,7 @@ struct Panel: View {
                     Image(systemName: "chevron.right").resizable().scaledToFit().frame(width: 10, height: 10)
                         .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }
-                .row(height: Metrics.sectionRow + Metrics.itemPadding, highlighted: model.hovered == moreID || isOpen) {
+                .row(height: Metrics.sectionRow + Metrics.itemPadding, highlighted: model.hovered == moreID) {
                     model[keyPath: expanded].toggle()
                 }
                 .onHover { model.hovered = $0 ? moreID : nil }
@@ -149,11 +149,11 @@ struct Panel: View {
     // MARK: "⋯" — everything that is not needed every day
 
     @ViewBuilder private var moreMenu: some View {
-        Button("Import Link or QR Code from Clipboard", action: model.importClipboard)
-        Button("Import from v2rayN…", action: model.importV2rayN)
-        Button("Share Server…", action: model.shareServer).disabled(model.library.profile == nil)
+        Button("Import Link or QR Code from Clipboard", systemImage: "doc.on.clipboard", action: model.importClipboard)
+        Button("Import from v2rayN…", systemImage: "square.and.arrow.down", action: model.importV2rayN)
+        Button("Share Server…", systemImage: "qrcode", action: model.shareServer).disabled(model.library.profile == nil)
         Divider()
-        Menu(model.xrayTitle) {
+        Menu(model.xrayTitle, systemImage: "cpu") {
             Section("Version") {
                 ForEach(model.xrayVersions, id: \.path) { v in
                     Toggle(v.title, isOn: Binding(get: { v.path == model.library.settings.xrayPath },
@@ -162,10 +162,10 @@ struct Panel: View {
                 if !Assets.installedXray().contains(Assets.testedXray) {
                     Button("Download \(Assets.testedXray) (tested with XrayBar)", action: model.downloadTestedXray)
                 }
-                Button("Check for Newer Versions…", action: model.checkNewerXray).disabled(model.updating)
+                Button("Check for Newer Versions…", systemImage: "arrow.down.circle", action: model.checkNewerXray).disabled(model.updating)
             }
             Section("Routing Data") {
-                Button("Update Routing Data", action: model.updateData).disabled(model.updating)
+                Button("Update Routing Data", systemImage: "arrow.triangle.2.circlepath", action: model.updateData).disabled(model.updating)
                 Picker("Source", selection: Binding(get: { model.dataSource }, set: model.selectDataSource)) {
                     ForEach(Assets.DataSource.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
@@ -173,28 +173,28 @@ struct Panel: View {
             Divider()
             let excluded = model.library.settings.routeExclusions ?? []
             Button(excluded.isEmpty ? "Exclude from Tunnel…" : "Exclude from Tunnel (\(excluded.count))…",
-                   action: model.editExclusions)
+                   systemImage: "arrow.uturn.right", action: model.editExclusions)
         }
-        Menu("Diagnostics") {
-            Button("Show Xray Log", action: model.showLog)
+        Menu("Diagnostics", systemImage: "stethoscope") {
+            Button("Show Xray Log", systemImage: "doc.text", action: model.showLog)
             Toggle("Detailed Log", isOn: Binding(get: { model.library.settings.detailedLog == true },
                                                  set: { _ in model.toggleDetailedLog() }))
-            Button("Show Data Folder", action: model.showDataFolder)
+            Button("Show Data Folder", systemImage: "folder", action: model.showDataFolder)
             if Helper.installed && model.tick >= 0 {
                 Divider()
-                Button("Uninstall Helper…", action: model.uninstallHelper)
+                Button("Uninstall Helper…", systemImage: "trash", action: model.uninstallHelper)
             }
         }
         if !Helper.installed && model.tick >= 0 {
-            Button("Use Touch ID to Connect…", action: model.installHelper)
+            Button("Use Touch ID to Connect…", systemImage: "touchid", action: model.installHelper)
         } else if Helper.outdated {
-            Button("Update Helper…", action: model.installHelper)
+            Button("Update Helper…", systemImage: "arrow.clockwise", action: model.installHelper)
         }
         if Bundle.main.bundlePath.hasSuffix(".app") {   // login items need an app bundle
             Toggle("Open at Login", isOn: Binding(get: { model.opensAtLogin }, set: { _ in model.toggleOpenAtLogin() }))
         }
         Divider()
-        Button("Quit XrayBar", action: model.quit).keyboardShortcut("q")
+        Button("Quit XrayBar", systemImage: "power", action: model.quit).keyboardShortcut("q")
     }
 }
 
