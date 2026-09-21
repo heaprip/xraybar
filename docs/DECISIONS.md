@@ -608,3 +608,21 @@ files. (Launched while one runs, nothing appears; quit the running one first.)
 → `os.Logger`, subsystem `io.github.heaprip.xraybar`: state changes, every alert shown, and the
 keychain falling back to the file. Titles are public, dynamic text private (redacted unless
 private data logging is enabled), since messages can name servers.
+
+## D47. Russian UI; the English text is the key (2026-09-21)
+
+The docs were bilingual but the app only spoke English, while most of its users read Russian.
+→ `Support/ru.lproj/Localizable.strings`, copied into the bundle by `make-app.sh`
+(`CFBundleLocalizations` en, ru; an empty `en.lproj` marks English as present). Keys are the
+English text itself, so the source keeps reading as English and a missing translation shows
+English instead of a key. No String Catalog: it needs Xcode's tooling, not the CLT.
+→ SwiftUI menu literals are looked up by SwiftUI (`\(…)` becomes `%@` in the key). Everything
+else goes through `L(_:)`, a one-line `Bundle.main` lookup; texts with values use
+`String(format: L("… %@ …"), …)`. Every alert comes from `newAlert()`, an NSAlert subclass that
+translates its title, text and buttons in `runModal`, so static alert texts needed no changes
+where they are written.
+→ A test reads the Russian file: each entry must keep its key's `%@`/`%ld` arguments, and each
+key must still occur in the sources. It cannot find English texts that have no translation yet;
+CLAUDE.md asks for an entry with every new string. Low-level errors (socket, HTTP codes) and
+server names stay as they are.
+→ `swift run` has no bundle, so it shows English.

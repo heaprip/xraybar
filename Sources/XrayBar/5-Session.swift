@@ -65,11 +65,11 @@ final class Session {
                         + "Quit and reopen XrayBar, then allow access when macOS asks.")
         }
         guard let xray = library.settings.xrayBinary else {
-            return fail("No Xray installed yet. Choose Xray › Download \(Assets.testedXray), or Copy Xray from v2rayN.")
+            return fail(String(format: L("No Xray installed yet. Choose Xray › Download %@, or Copy Xray from v2rayN."), Assets.testedXray))
         }
         if let other = Self.otherTunnel() {
-            return fail("Another VPN or TUN (\(other)) already routes all traffic, for example v2rayN in TUN mode. "
-                        + "Turn it off, then connect again.")
+            return fail(String(format: L("Another VPN or TUN (%@) already routes all traffic, for example v2rayN in TUN mode. "
+                                         + "Turn it off, then connect again."), other))
         }
         let s = library.settings
         let config = XrayConfig.make(profile: profile, routing: library.routing, settings: s, ipv6: Self.hasGlobalIPv6())
@@ -101,9 +101,9 @@ final class Session {
         let line = try Assets.versionLine(ofXray: path)
         guard Assets.version(line).lexicographicallyPrecedes(Assets.minimumXray) == false else {
             throw NSError(domain: "XrayBar", code: 4, userInfo: [NSLocalizedDescriptionKey:
-                "\(line.split(separator: " ").prefix(2).joined(separator: " ")) is too old for native TUN on macOS "
-                + "(needs \(Assets.minimumXray.map(String.init).joined(separator: ".")) or newer). "
-                + "Choose one in Xray Version."])
+                String(format: L("%@ is too old for native TUN on macOS (needs %@ or newer). Choose one in Xray Version."),
+                       line.split(separator: " ").prefix(2).joined(separator: " "),
+                       Assets.minimumXray.map(String.init).joined(separator: "."))])
         }
 
         let file = Store.dir.appendingPathComponent("config.test.json")
@@ -122,7 +122,7 @@ final class Session {
         xray.waitUntilExit()
         guard xray.terminationStatus == 0 else {
             throw NSError(domain: "XrayBar", code: 1, userInfo: [NSLocalizedDescriptionKey:
-                "Xray rejected the configuration:\n" + text.split(separator: "\n").suffix(3).joined(separator: "\n")])
+                L("Xray rejected the configuration:") + "\n" + text.split(separator: "\n").suffix(3).joined(separator: "\n")])
         }
     }
 
@@ -250,9 +250,9 @@ final class Session {
             try? FileManager.default.removeItem(at: Store.configFile)
             set(.connected)
         case .connecting where Date().timeIntervalSince(connectStarted) > 15:
-            fail("Xray did not start.\n\n" + Self.logTail())
+            fail(L("Xray did not start.") + "\n\n" + Self.logTail())
         case .connected where !running:
-            fail("Xray stopped unexpectedly.\n\n" + Self.logTail())
+            fail(L("Xray stopped unexpectedly.") + "\n\n" + Self.logTail())
         case .disconnecting where !running:
             try? FileManager.default.removeItem(at: Store.stopFile)
             set(.disconnected)

@@ -49,7 +49,8 @@ scripts/make-app.sh                          # builds build/XrayBar.app (ad-hoc 
 cp -R build/XrayBar.app /Applications/       # then open it from /Applications
 ```
 
-For development, `swift run` works too.
+For development, `swift run` works too (English only: translations need the app bundle).
+The interface follows the system language: English or Russian.
 
 ## Getting started
 

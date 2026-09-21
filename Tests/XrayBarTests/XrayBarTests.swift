@@ -272,3 +272,28 @@ struct AssetsDownloadTests {
         #expect(rest.count == 8)
     }
 }
+
+@Suite struct LocalizationTests {
+    /// Every Russian entry has the same format arguments as its key, and the key is still in the
+    /// sources (literals joined across `+`; %@ and %ld stand for `\(…)` in SwiftUI keys), so a
+    /// renamed English text cannot leave its translation silently unused (D47).
+    @Test func russianStringsMatchSources() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let file = root.appendingPathComponent("Support/ru.lproj/Localizable.strings")
+        let strings = try #require(NSDictionary(contentsOf: file) as? [String: String])
+        #expect(strings.count > 100)
+        let sources = try FileManager.default.contentsOfDirectory(at: root.appendingPathComponent("Sources/XrayBar"),
+                                                                  includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "swift" }.map { try String(contentsOf: $0, encoding: .utf8) }.joined()
+            .replacingOccurrences(of: #""\s*\+\s*""#, with: "", options: .regularExpression)
+        let specs = { (s: String) in s.matches(of: /%(@|ld)/).map { String($0.output.0) } }
+        for (key, value) in strings {
+            #expect(specs(key) == specs(value), "format arguments differ: \(key)")
+            let pattern = NSRegularExpression.escapedPattern(for: key)
+                .replacingOccurrences(of: "%@", with: #"(%@|\\\(.+?\))"#)
+                .replacingOccurrences(of: "%ld", with: #"(%ld|\\\(.+?\))"#)
+            #expect(sources.range(of: "\"" + pattern + "\"", options: .regularExpression) != nil, "unused key: \(key)")
+        }
+    }
+}

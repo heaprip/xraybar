@@ -27,7 +27,9 @@ Read `docs/PRINCIPLES.md` first. The short version:
   `docs/SECURITY.md` in sync with what the code does, and the README's "Not done yet" line.
 - **Docs are bilingual.** English is primary; `README.ru.md` and `docs/ru/` mirror README,
   PRINCIPLES, SECURITY and AUDIT. Update the Russian file in the same commit.
-  `DECISIONS.md` is English only.
+  `DECISIONS.md` is English only. The UI is English and Russian: a new or changed user-facing
+  string needs its entry in `Support/ru.lproj/Localizable.strings` (keyed by the English text;
+  the tests catch unused keys and mismatched `%@`/`%ld`, not missing ones).
 
 Build: `swift build`. Test: `scripts/test.sh` (plain `swift test` hits a CLT plugin bug, see
 the script). Integration (local v2rayN + xray, read-only): `scripts/test.sh --integration`.

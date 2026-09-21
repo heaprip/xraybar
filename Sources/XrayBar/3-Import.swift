@@ -10,8 +10,8 @@ enum ImportError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unsupported(let s): "Unsupported link: \(s)"
-        case .v2rayN(let s): "v2rayN import failed: \(s)"
+        case .unsupported(let s): String(format: L("Unsupported link: %@"), s)
+        case .v2rayN(let s): String(format: L("v2rayN import failed: %@"), s)
         }
     }
 }

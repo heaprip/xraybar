@@ -59,10 +59,10 @@ final class AppModel {
     var statusText: String {
         let name = library.profile?.name ?? ""
         switch state {
-        case .connected: return "Connected — \(name)"
-        case .connecting: return "Connecting…"
-        case .disconnecting: return "Disconnecting…"
-        case .disconnected, .failed: return "Not Connected"
+        case .connected: return String(format: L("Connected — %@"), name)
+        case .connecting: return L("Connecting…")
+        case .disconnecting: return L("Disconnecting…")
+        case .disconnected, .failed: return L("Not Connected")
         }
     }
 
@@ -80,8 +80,8 @@ final class AppModel {
     /// Shown instead of the status line while Option is held, like the system Wi-Fi menu.
     var details: String {
         let s = library.settings
-        let tunnel = state == .connected ? "utun77" : "no tunnel"
-        return "\(tunnel) · \(xrayTitle) · DNS \(s.systemDNS.joined(separator: ", ")) · \(helperInstalled ? "Touch ID" : "password")"
+        let tunnel = state == .connected ? "utun77" : L("no tunnel")
+        return "\(tunnel) · \(xrayTitle) · DNS \(s.systemDNS.joined(separator: ", ")) · \(helperInstalled ? "Touch ID" : L("password"))"
     }
 
     /// The xray Connect uses: the chosen version if installed, else the newest installed one.
@@ -103,14 +103,14 @@ final class AppModel {
             ?? "Xray"
     }
 
-    private static func xrayName(_ tag: String) -> String { tag == Assets.v2rayNTag ? "from v2rayN" : tag }
+    private static func xrayName(_ tag: String) -> String { tag == Assets.v2rayNTag ? L("from v2rayN") : tag }
 
     /// Installed versions as (path, title); "works" once it has carried traffic.
     var xrayVersions: [(path: String, title: String)] {
         installedXray.map { tag in
             let path = Assets.xrayPath(tag)
-            let title = tag == Assets.testedXray ? "\(tag) (tested with XrayBar)" : Self.xrayName(tag)
-            return (path, path == library.settings.goodXray ? "\(title) — works" : title)
+            let title = tag == Assets.testedXray ? String(format: L("%@ (tested with XrayBar)"), tag) : Self.xrayName(tag)
+            return (path, path == library.settings.goodXray ? String(format: L("%@ — works"), title) : title)
         }
     }
 
@@ -186,7 +186,7 @@ final class AppModel {
     private func confirmRemove(_ name: String) -> Bool {
         NSApp.activate()
         let a = Self.newAlert()
-        a.messageText = "Remove “\(name)”?"
+        a.messageText = String(format: L("Remove “%@”?"), name)
         a.informativeText = "This cannot be undone. A running connection is not affected."
         a.addButton(withTitle: "Remove").hasDestructiveAction = true
         a.addButton(withTitle: "Cancel")
@@ -203,7 +203,7 @@ final class AppModel {
                 library.settings.assetsDir = Assets.dir.path
                 save()
                 updating = false
-                alert("Routing data updated", "\(source.title). Checksums verified. Takes effect on the next Connect.")
+                alert("Routing data updated", String(format: L("%@. Checksums verified. Takes effect on the next Connect."), source.title))
             } catch {
                 updating = false
                 alert("Update failed", error.localizedDescription)
@@ -230,9 +230,9 @@ final class AppModel {
                 guard !fresh.isEmpty else { return alert("No newer versions", "All recent Xray releases are installed.") }
                 let a = Self.newAlert()
                 a.messageText = "Download Xray"
-                a.informativeText = "Releases newer than \(Assets.minimumXray.map(String.init).joined(separator: ".")), "
-                    + "from GitHub (Xray marks them all as pre-releases). Checked against each release's SHA-256. "
-                    + "The first connection with it is a trial: if no traffic passes, you can switch back."
+                a.informativeText = String(format: L("Releases newer than %@, from GitHub (Xray marks them all as pre-releases). "
+                    + "Checked against each release's SHA-256. The first connection with it is a trial: if no traffic "
+                    + "passes, you can switch back."), Assets.minimumXray.map(String.init).joined(separator: "."))
                 let list = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 26))
                 list.addItems(withTitles: fresh)
                 a.accessoryView = list
@@ -254,10 +254,10 @@ final class AppModel {
                 let binary = try await Assets.downloadXray(tag)
                 defer { try? FileManager.default.removeItem(at: Assets.staging) }
                 guard try installXray(tag, from: binary) else { return }
-                alert("Xray \(tag) installed", "It is used from the next Connect. The previous version stays installed "
+                alert(String(format: L("Xray %@ installed"), tag), "It is used from the next Connect. The previous version stays installed "
                       + "and can be chosen again in Xray Version.")
             } catch {
-                alert("Could not install Xray \(tag)", error.localizedDescription)
+                alert(String(format: L("Could not install Xray %@"), tag), error.localizedDescription)
             }
         }
     }
@@ -278,7 +278,7 @@ final class AppModel {
         let hash = try Assets.sha256(binary)
         do {
             try session.runPrivileged(["--xray", tag, binary.path, hash], detached: false, script: "xraybar-install",
-                                      prompt: "XrayBar wants to install Xray \(Self.xrayName(tag)).")
+                                      prompt: String(format: L("XrayBar wants to install Xray %@."), Self.xrayName(tag)))
         } catch is CancellationError {
             return false
         }
@@ -339,7 +339,7 @@ final class AppModel {
         let entries = field.stringValue.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
         let invalid = entries.filter { CIDR.parse($0) == nil }
-        guard invalid.isEmpty else { return alert("Not saved", "Not an IPv4 address or network: " + invalid.joined(separator: ", ")) }
+        guard invalid.isEmpty else { return alert("Not saved", L("Not an IPv4 address or network:") + " " + invalid.joined(separator: ", ")) }
         library.settings.routeExclusions = entries
         saveSelection()
     }
@@ -391,7 +391,7 @@ final class AppModel {
     }
 
     func uninstallHelper() {
-        guard session.state != .connected, confirmRemove("XrayBar helper") else {
+        guard session.state != .connected, confirmRemove(L("XrayBar helper")) else {
             return session.state == .connected ? alert("Disconnect first", "The helper runs the current connection.") : ()
         }
         do {
@@ -449,7 +449,7 @@ final class AppModel {
             // Name what was recognized, so a scan of an existing server still shows it worked.
             let new = profiles.filter { p in !known.contains { $0.uuid == p.uuid && $0.address == p.address } }
             alert(new.isEmpty ? "Already in your servers" : "Server added",
-                  (new + known).map { "\($0.name) — \($0.address):\($0.port)" + (new.contains($0) ? "" : " (already added)") }
+                  (new + known).map { "\($0.name) — \($0.address):\($0.port)" + (new.contains($0) ? "" : " " + L("(already added)")) }
                       .joined(separator: "\n"))
         } catch {
             alert("Import failed", error.localizedDescription)
@@ -461,8 +461,9 @@ final class AppModel {
             let imported = try Import.fromV2rayN()
             let added = Import.merge(imported, into: &library)
             save()
-            alert("Imported from v2rayN",
-                  "\(added) new item(s): \(imported.profiles.count) VLESS server(s), \(imported.routing.count) routing set(s) found. v2rayN was only read, not changed.")
+            alert("Imported from v2rayN", String(format: L("%ld new item(s): %ld VLESS server(s), %ld routing set(s) found. "
+                                                             + "v2rayN was only read, not changed."),
+                                                 added, imported.profiles.count, imported.routing.count))
         } catch {
             alert("Import failed", error.localizedDescription)
         }
@@ -495,7 +496,7 @@ final class AppModel {
 
     /// The app icon, set explicitly: the bundle's icon, or the SF Symbol when run unbundled.
     static func newAlert() -> NSAlert {
-        let a = NSAlert()
+        let a = LocalizedAlert()
         a.icon = NSApp.applicationIconImage
         return a
     }
@@ -528,10 +529,10 @@ final class AppModel {
     func showAbout() {
         let small: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
                                                     .foregroundColor: NSColor.secondaryLabelColor]
-        let credits = NSMutableAttributedString(string: "A menu-bar client for Xray-core's native TUN.\n", attributes: small)
+        let credits = NSMutableAttributedString(string: L("A menu-bar client for Xray-core's native TUN.") + "\n", attributes: small)
         credits.append(NSAttributedString(string: "github.com/heaprip/xraybar", attributes:
             small.merging([.link: URL(string: "https://github.com/heaprip/xraybar")!]) { $1 }))
-        credits.append(NSAttributedString(string: "\nXray-core is a separate program (MPL-2.0).", attributes: small))
+        credits.append(NSAttributedString(string: "\n" + L("Xray-core is a separate program (MPL-2.0)."), attributes: small))
         NSApp.activate()
         NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
     }
@@ -552,5 +553,16 @@ final class AppModel {
         a.messageText = title
         a.informativeText = text
         a.runModal()
+    }
+}
+
+/// Every alert's title, text and buttons are translated just before it shows (D47), so the
+/// English text above stays the one place to read; formatted texts are translated where built.
+final class LocalizedAlert: NSAlert {
+    override func runModal() -> NSApplication.ModalResponse {
+        messageText = L(messageText)
+        informativeText = L(informativeText)
+        buttons.forEach { $0.title = L($0.title) }
+        return super.runModal()
     }
 }

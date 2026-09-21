@@ -8,6 +8,11 @@ import SwiftUI
 /// Dynamic text is private by default, so server names and addresses show as <private>.
 let appLog = Logger(subsystem: "io.github.heaprip.xraybar", category: "app")
 
+/// Text in the user's language: Support/<lang>.lproj/Localizable.strings, keyed by the English
+/// text itself, so a missing translation shows English (D47). The menu's SwiftUI literals are
+/// looked up the same way by SwiftUI; formats use %@ and %ld.
+func L(_ english: String) -> String { Bundle.main.localizedString(forKey: english, value: nil, table: nil) }
+
 @main
 struct XrayBarApp: App {
     // A plain constant: SwiftUI creates the App once. (@State is a macro in the macOS 27 SDK

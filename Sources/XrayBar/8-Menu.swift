@@ -87,7 +87,7 @@ struct AppMenu: View {
             ForEach(items, id: \.id) { toggle($0) }
         } else {
             ForEach(items.filter { $0.id == selected }, id: \.id) { toggle($0) }
-            Menu(more) { ForEach(items.filter { $0.id != selected }, id: \.id) { toggle($0) } }
+            Menu(L(more)) { ForEach(items.filter { $0.id != selected }, id: \.id) { toggle($0) } }
         }
     }
 
@@ -115,7 +115,7 @@ struct AppMenu: View {
         }
         Divider()
         let excluded = model.library.settings.routeExclusions ?? []
-        Button(excluded.isEmpty ? "Exclude from Tunnel…" : "Exclude from Tunnel (\(excluded.count))…",
+        Button(excluded.isEmpty ? L("Exclude from Tunnel…") : String(format: L("Exclude from Tunnel (%ld)…"), excluded.count),
                systemImage: "arrow.uturn.right", action: model.editExclusions)
     }
 

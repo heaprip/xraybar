@@ -18,6 +18,7 @@ cp Support/Info.plist "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(git rev-list --count HEAD 2>/dev/null || echo 1)" "$app/Contents/Info.plist"
 cp "$bin/XrayBar" "$app/Contents/MacOS/XrayBar"
 cp "$bin/XrayBarHelper" "$app/Contents/MacOS/XrayBarHelper"   # installed as root only on request (D28)
+cp -R Support/*.lproj "$app/Contents/Resources/"   # UI translations (D47)
 # SwiftPM looks for the resource bundle (the session script) in Contents/Resources.
 cp -R "$bin/XrayBar_XrayBar.bundle" "$app/Contents/Resources/"
 # The icon is drawn from source at build time (no binary images in the repository).

@@ -22,7 +22,7 @@ fail=0
 (( shell_lines <= SHELL_BUDGET )) || { echo "FAIL: script budget exceeded"; fail=1; }
 
 section "Files in the repository that are not source, docs or config"
-git ls-files | grep -vE '\.(swift|md|sh|json|plist)$|^\.gitignore$|^LICENSE$|^docs/images/.*\.png$' || echo "  (none)"
+git ls-files | grep -vE '\.(swift|md|sh|json|plist|strings)$|^\.gitignore$|^LICENSE$|^docs/images/.*\.png$' || echo "  (none)"
 
 section "Declared package dependencies"
 grep -n 'dependencies' Package.swift

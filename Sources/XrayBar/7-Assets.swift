@@ -28,8 +28,8 @@ enum Assets {
 
         var title: String {
             switch self {
-            case .runetfreedom: "runetfreedom (Russia)"
-            case .loyalsoldier: "Loyalsoldier (China)"
+            case .runetfreedom: L("runetfreedom (Russia)")
+            case .loyalsoldier: L("Loyalsoldier (China)")
             }
         }
         var baseURL: String {
@@ -192,7 +192,7 @@ enum Assets {
 
     static func verify(_ file: URL, expected: String) throws {
         guard expected.count == 64, try sha256(file) == expected.lowercased() else {
-            throw failure("\(file.lastPathComponent): checksum mismatch, nothing was installed")
+            throw failure(String(format: L("%@: checksum mismatch, nothing was installed"), file.lastPathComponent))
         }
     }
 
