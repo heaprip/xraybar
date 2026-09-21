@@ -2,7 +2,7 @@
 # Deterministic inventory of everything security-relevant in XrayBar. No network, no AI.
 # Compare its output with the table in docs/SECURITY.md. Exit code 1 if the size budget fails.
 set -u
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 SWIFT_BUDGET=1700   # lines in Sources/XrayBar, excluding blank lines (1200 → 1400 D23 → 1500 D29 → 1600 D31 → 1700 D45)
 HELPER_BUDGET=180   # lines in the root helper (Sources/XrayBarHelper), excluding blank lines (150 → 180 D42)
