@@ -527,9 +527,13 @@ the session ends (watching a root process needs no rights over it and sends it n
 checked on this Mac). Only the short connecting/disconnecting states are checked every 0.5 s.
 A session found without its script while connected now offers Restore (it only did so while
 disconnecting). Exits during sleep are delivered on wake.
-→ Sleep and wake need nothing of their own: on wake the link returns, configd republishes the
-primary service, the watcher reports `network`, and the log records it
-(`network: en0 -> none`, `none -> en0`) for diagnosis. Not verified live yet.
+→ Sleep and wake need nothing of their own. If the link drops during sleep, configd removes
+and later republishes the primary service, the watcher reports `network` and the log records
+it (`network: en0 -> none`, `none -> en0`). Checked live the same day: toggling Wi-Fi logged
+both lines and traffic resumed by itself; a sleep on AC power (`TCPKeepAlive=active` in
+`pmset -g log`) kept Wi-Fi associated, so no event came and none was needed: traffic went
+through the tunnel during DarkWake and right after the full wake, without reconnecting.
+A sleep that drops the link (on battery, longer) is not checked yet.
 → Known gap: a session started outside this app instance while it shows Not Connected is
 noticed at the next launch, not at once (before: within a second).
 → Budgets: helper 150 → 180 lines, root scripts 250 → 270.
