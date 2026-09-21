@@ -380,3 +380,19 @@ Compared side by side with the live Wi-Fi panel once rows had their real height 
 → Rows not in use sit on a gray circle (Wi-Fi's other networks), the one in use on a blue one.
 → "Other …" is shaded only under the pointer, not while expanded.
 → "XrayBar Options" items carry SF Symbols, as macOS 26 menus do (Karabiner, Battery).
+
+## D34. Back to a standard menu (HIG); connect at launch (2026-09-21)
+
+After D29–D33 the panel came close to Wi-Fi but stayed hand-made. Karabiner-Elements, which the
+author found indistinguishable from the system, is a default-style `MenuBarExtra`: SwiftUI
+buttons with `Label(…, systemImage:)`, rendered by the system as an NSMenu. The author chose
+the HIG over a menu that stays open: once connected, people rarely open it.
+→ UI is `AppMenu` (8-Menu.swift): status, Connect/Disconnect, Server and Routing sections with
+system checkmarks (up to four inline, the rest in "Other …" submenus), import/share, a
+*Remove ›* submenu (menus have no right-click), *Xray v… ›*, *Diagnostics ›*, helper, toggles,
+Quit. The panel code (metrics, rows, hover, blur) is gone.
+→ *Connect at Launch* (setting, on by default): at startup XrayBar connects to the last used
+server unless a restore is pending, no server exists, or another VPN owns the routes. It still
+authorizes (Touch ID with the helper, else the password): an unauthenticated connect would let
+any process of the user make root run an xray binary from a user-writable folder. With
+*Open at Login* the user needs no click, only the one authentication.

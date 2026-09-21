@@ -3,7 +3,7 @@
 Read `docs/PRINCIPLES.md` first. The short version:
 
 - **Small and readable is a feature.** Keep the app a handful of numbered files read top to
-  bottom (`Sources/XrayBar/1-Model.swift` … `8-Panel.swift`, then `App.swift`). Prefer straight-line code over
+  bottom (`Sources/XrayBar/1-Model.swift` … `8-Menu.swift`, then `App.swift`). Prefer straight-line code over
   abstractions. `scripts/audit.sh` enforces the size budget; run it before committing.
 - **Small app, libraries allowed.** A well-known, maintained package is fine when it replaces
   code we would write; pin an exact version and list it in docs/SECURITY.md. It must build
@@ -13,8 +13,8 @@ Read `docs/PRINCIPLES.md` first. The short version:
   start; never find processes by name or pattern.
 - **No network I/O in the app** unless the user explicitly started it (future asset updates),
   and then only from one documented place.
-- **Native look.** A `MenuBarExtra` window panel (like Wi-Fi) with system controls, SwiftUI
-  menus for secondary actions, SF Symbols, `NSAlert`. No custom styling. Avoid `@State` and
+- **Native look.** A standard `MenuBarExtra` menu (HIG; like Karabiner-Elements): SwiftUI
+  `Button`/`Toggle`/`Menu`/`Section` with SF Symbols, `NSAlert` for dialogs. No custom styling. Avoid `@State` and
   other SwiftUI macros: the Command Line Tools lack their plugin (see App.swift).
 - **Match v2rayN's behaviour, never copy its code.** v2rayN is GPL-3.0, XrayBar is MIT (D9).
   Read `.ref/v2rayN` (shallow clone, not tracked) to understand *what* it does, then write
@@ -35,3 +35,7 @@ script will do, run snippets under `/bin/bash --noprofile --norc`.
 
 Never touch the user's v2rayN installation beyond read-only access to its database and
 binaries. Never stop processes you did not start.
+
+Do not launch the built app to smoke-test it: with *Connect at Launch* it may start a
+connection and put an authorization prompt on the user's screen. Build, run the tests, and
+let the user try the app.

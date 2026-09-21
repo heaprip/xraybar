@@ -22,12 +22,11 @@ struct XrayBarApp: App {
     }
 
     var body: some Scene {
-        // A window-style menu bar extra: stays open while choosing (8-Panel.swift).
+        // A standard menu (8-Menu.swift), as the HIG asks for menu bar extras.
         MenuBarExtra {
-            Panel(model: model)
+            AppMenu(model: model)
         } label: {
             Image(systemName: model.iconName)
         }
-        .menuBarExtraStyle(.window)
     }
 }

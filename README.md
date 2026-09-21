@@ -33,7 +33,8 @@ one-click switch back if no traffic passes. **Update Routing Data** fetches
 install is used (`~/Library/Application Support/v2rayN/bin`). Import servers with
 **Import Link or QR Code from Clipboard** (copy a `vless://…` link, or press ⌘⇧⌃4 and select a
 QR code — the screenshot goes to the clipboard), or **Import from v2rayN…** (read-only).
-**Share Server…** shows a QR code. Right-click a server or routing set in the panel to remove it.
+**Share Server…** shows a QR code. **Remove ›** deletes servers or routing sets. With **Connect at Launch** (on by default) XrayBar
+connects to the last used server when it starts; pair it with **Open at Login**.
 
 Connect asks for your administrator password: creating a TUN interface needs root.
 **Use Touch ID to Connect…** installs a small root-owned helper once; after that each Connect

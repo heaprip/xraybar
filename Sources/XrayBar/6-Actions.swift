@@ -1,5 +1,5 @@
 // 6. Actions — what the UI can do: connect, choose, import, manage Xray and the helper.
-// The panel (8-Panel.swift) only shows this model's state and calls these methods.
+// The menu (8-Menu.swift) only shows this model's state and calls these methods.
 
 import AppKit
 import CoreImage.CIFilterBuiltins
@@ -12,21 +12,33 @@ final class AppModel {
     private(set) var library = Store.load()
     private(set) var state: Session.State = .disconnected
     private(set) var updating = false
-    /// A server or routing change while connected: shown in the panel with a Reconnect button.
+    /// A server or routing change while connected: the menu offers Reconnect.
     private(set) var changedWhileConnected = false
-    /// Bumped after actions that change things the panel reads from disk (helper, versions).
+    /// Bumped after actions that change things the menu reads from disk (helper, versions).
     private(set) var tick = 0
-    /// The panel row under the pointer (kept here: the panel has no @State, see App.swift).
-    var hovered: UUID?
-    /// Whether "Other Servers" / "Other Routing Sets" are expanded in the panel.
-    var serversExpanded = false
-    var routingExpanded = false
     @ObservationIgnored let session = Session()
 
     init() {
         state = session.state
         session.onChange = { [weak self] in self?.stateChanged() }
-        if Session.needsRestore { DispatchQueue.main.async { self.offerRestore() } }
+        DispatchQueue.main.async { self.launched() }
+    }
+
+    /// At launch: clean up after a session that died, or connect to the last used server so
+    /// the user needs no click at all (Connect at Launch, on by default). Connecting still asks
+    /// for authorization (Touch ID with the helper): root must not start xray unasked (D34).
+    private func launched() {
+        if Session.needsRestore { return offerRestore() }
+        if connectsAtLaunch, library.profile != nil, state == .disconnected, Session.otherTunnel() == nil {
+            connect()
+        }
+    }
+
+    var connectsAtLaunch: Bool { library.settings.connectAtLaunch ?? true }
+
+    func toggleConnectAtLaunch() {
+        library.settings.connectAtLaunch = !connectsAtLaunch
+        save()
     }
 
     var statusText: String {
@@ -315,7 +327,7 @@ final class AppModel {
         saveSelection()
     }
 
-    /// A running session keeps its config; the panel offers Reconnect to apply the change.
+    /// A running session keeps its config; the menu offers Reconnect to apply the change.
     private func saveSelection() {
         save()
         if session.state == .connected { changedWhileConnected = true }

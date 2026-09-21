@@ -72,6 +72,8 @@ struct Settings: Codable, Equatable, Sendable {
     var dataSource: Assets.DataSource?
     /// IPv4 addresses/CIDRs routed by the system outside the tunnel (never reach Xray).
     var routeExclusions: [String]?
+    /// Connect to the last used server when XrayBar starts (nil means on).
+    var connectAtLaunch: Bool?
 }
 
 /// Everything persisted, in one file.
