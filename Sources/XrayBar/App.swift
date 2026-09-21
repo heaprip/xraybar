@@ -1,7 +1,12 @@
 // XrayBar — a menu-bar control panel for Xray-core's native TUN on macOS.
 // Start reading at 1-Model.swift. This file only starts the app.
 
+import OSLog
 import SwiftUI
+
+/// Unified logging (Console.app, or `log stream --predicate 'subsystem == "io.github.heaprip.xraybar"'`).
+/// Dynamic text is private by default, so server names and addresses show as <private>.
+let appLog = Logger(subsystem: "io.github.heaprip.xraybar", category: "app")
 
 @main
 struct XrayBarApp: App {
@@ -10,6 +15,11 @@ struct XrayBarApp: App {
     private let model: AppModel
 
     init() {
+        // One instance only: a second one would run its own sessions against the same files.
+        if let id = Bundle.main.bundleIdentifier,
+           NSRunningApplication.runningApplications(withBundleIdentifier: id).contains(where: { $0 != .current }) {
+            exit(0)
+        }
         NSApplication.shared.setActivationPolicy(.accessory)   // menu bar only, no Dock icon
         // Run without a bundle (swift run), alerts would show a folder icon; the .app has AppIcon.icns.
         if !Bundle.main.bundlePath.hasSuffix(".app") {
@@ -27,6 +37,7 @@ struct XrayBarApp: App {
             AppMenu(model: model)
         } label: {
             Image(systemName: model.iconName)
+                .accessibilityLabel(model.statusText)   // VoiceOver: "Connected — …", not "shield"
         }
     }
 }

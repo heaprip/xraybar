@@ -269,6 +269,8 @@ final class Session {
     private func set(_ new: State) {
         guard new != state else { return }
         state = new
+        if case .failed(let message) = new { appLog.error("Failed: \(message)") }
+        else { appLog.info("State: \(String(describing: new), privacy: .public)") }
         track()
         onChange()
     }

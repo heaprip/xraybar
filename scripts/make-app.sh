@@ -14,6 +14,8 @@ app=build/XrayBar.app
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp Support/Info.plist "$app/Contents/Info.plist"
+# Build number (shown in About as "0.2.0 (57)"): the commit count, so every build is distinct.
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(git rev-list --count HEAD 2>/dev/null || echo 1)" "$app/Contents/Info.plist"
 cp "$bin/XrayBar" "$app/Contents/MacOS/XrayBar"
 cp "$bin/XrayBarHelper" "$app/Contents/MacOS/XrayBarHelper"   # installed as root only on request (D28)
 # SwiftPM looks for the resource bundle (the session script) in Contents/Resources.

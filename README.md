@@ -72,7 +72,7 @@ For development, `swift run` works too.
 | Server, Routing | Choose the server and routing set (routing sets use v2rayN's format) |
 | Share Server… | The selected server as a QR code |
 | Xray › | Versions side by side; a new version's first connection is checked, with a one-click switch back. Routing data source and update. *Exclude from Tunnel…* for networks that must bypass Xray |
-| Diagnostics › | Log, detailed log, data folder, uninstall the helper |
+| Diagnostics › | Log, detailed log, data folder, uninstall the helper. XrayBar's own log: Console.app, subsystem `io.github.heaprip.xraybar` |
 | **Option** held | *Remove* a server or routing set · *Copy Server Link* · technical details under the status line |
 
 Only short, readable code runs as root: [the session script](Sources/XrayBar/Resources/xraybar-session.sh),

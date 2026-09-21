@@ -594,3 +594,17 @@ are written to, `library.json` as before, and Connect explains when an id is mis
 its own copy, D21) and the root copy in `/var/run/xraybar` (root-only, deleted at the end).
 → Checked here: the keychain calls on a throwaway item (add, update, read, delete). Not yet
 checked live: the migration and the access prompt of a rebuilt app. Swift budget 1600 → 1700.
+
+## D46. macOS conventions: About, VoiceOver, one instance, unified logging (2026-09-21)
+
+From the outside review: things a Mac utility is expected to have.
+→ *About XrayBar* opens the standard About panel: icon, name, version and build from
+Info.plist (`NSHumanReadableCopyright` added), credits with the repository link. `make-app.sh`
+sets `CFBundleVersion` to the commit count, so every build is distinct ("0.2.0 (43)").
+→ The menu bar icon's accessibility label is the status line, so VoiceOver says "Connected —
+…" instead of the symbol's name.
+→ A second instance of the bundled app exits at once: two would run sessions against the same
+files. (Launched while one runs, nothing appears; quit the running one first.)
+→ `os.Logger`, subsystem `io.github.heaprip.xraybar`: state changes, every alert shown, and the
+keychain falling back to the file. Titles are public, dynamic text private (redacted unless
+private data logging is enabled), since messages can name servers.

@@ -26,6 +26,7 @@ enum Store {
 
     @MainActor static func load() -> Library {
         inKeychain = Keychain.read()
+        if inKeychain == nil { appLog.error("Keychain not readable: server ids stay in library.json") }
         guard let data = try? Data(contentsOf: libraryFile) else { return Library() }
         guard var library = try? JSONDecoder().decode(Library.self, from: data) else {
             // Unreadable (e.g. older format): keep it aside rather than overwrite it later.
@@ -48,6 +49,8 @@ enum Store {
         if inKeychain != nil, secrets == inKeychain || Keychain.write(secrets) {
             inKeychain = secrets
             for i in file.profiles.indices { file.profiles[i].uuid = "" }
+        } else if inKeychain != nil {
+            appLog.error("Keychain not writable: server ids kept in library.json")
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

@@ -524,6 +524,18 @@ final class AppModel {
         NSWorkspace.shared.activateFileViewerSelecting([Store.libraryFile])
     }
 
+    /// The standard About panel: icon, name, version and build from Info.plist, copyright, credits.
+    func showAbout() {
+        let small: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+                                                    .foregroundColor: NSColor.secondaryLabelColor]
+        let credits = NSMutableAttributedString(string: "A menu-bar client for Xray-core's native TUN.\n", attributes: small)
+        credits.append(NSAttributedString(string: "github.com/heaprip/xraybar", attributes:
+            small.merging([.link: URL(string: "https://github.com/heaprip/xraybar")!]) { $1 }))
+        credits.append(NSAttributedString(string: "\nXray-core is a separate program (MPL-2.0).", attributes: small))
+        NSApp.activate()
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+    }
+
     func quit() {
         session.disconnect()      // the root session also stops by itself when the app exits
         NSApp.terminate(nil)
@@ -534,6 +546,7 @@ final class AppModel {
     }
 
     private func alert(_ title: String, _ text: String) {
+        appLog.notice("\(title, privacy: .public): \(text)")
         NSApp.activate()
         let a = Self.newAlert()
         a.messageText = title

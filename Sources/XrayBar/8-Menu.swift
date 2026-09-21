@@ -63,6 +63,7 @@ struct AppMenu: View {
             Toggle("Open at Login", isOn: Binding(get: { model.opensAtLogin }, set: { _ in model.toggleOpenAtLogin() }))
         }
         Divider()
+        Button("About XrayBar", systemImage: "info.circle", action: model.showAbout)
         Button("Quit XrayBar", systemImage: "power", action: model.quit).keyboardShortcut("q")
     }
 

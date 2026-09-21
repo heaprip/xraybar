@@ -27,7 +27,10 @@ Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modif
 | Processes | the admin prompt (`NSAppleScript`), `xray run -test` for validation; `ditto` to unzip and `xray version` after a download; `route -n get` before Connect (is another VPN active?) | `5-Session.swift`, `7-Assets.swift` |
 | Secrets | each server's VLESS id (its credential) is kept in one login-keychain item, "XrayBar server credentials"; `library.json` (mode 600) holds the rest. If the keychain cannot be read or written, the ids stay in `library.json`. While connecting, the generated config (mode 600) holds them until the root session has its own copy | `2-Store.swift` |
 
-Nothing else: no telemetry, no crash reporting, no update checks, no analytics.
+Nothing else: no telemetry, no crash reporting, no update checks, no analytics. The link in
+*About XrayBar* opens in your browser only when you click it. The app logs its state changes and
+alerts to the system log (subsystem `io.github.heaprip.xraybar`); server names, addresses and
+error details are marked private there.
 
 ## Threat model
 
