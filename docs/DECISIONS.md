@@ -550,3 +550,24 @@ Connect; Connect and Reconnect first ask to *Update and Connect* (one administra
 then the usual Touch ID), and Cancel does not connect. Connect at Launch asks the same way.
 → No way to connect through an outdated helper is offered: the reason to update is that root
 code changed. *Diagnostics › Uninstall Helper* still leads back to the password-per-Connect path.
+
+## D44. Touch ID once per app run, in XrayBar's own authorization (2026-09-21)
+
+The right `io.github.heaprip.xraybar.connect` had `timeout 0`: every Connect asked, including
+Reconnect after choosing another server. The author found that tiring and chose "once after
+logging in" over "every few hours", "as now" or "never".
+→ The rule loses its timeout and stays `shared: false`. The app creates one AuthorizationRef at
+first use and keeps it until it quits; each helper request carries its external form, and the
+credential the helper's `AuthorizationCopyRights` obtains is stored in that authorization. So
+the first Connect of a run asks, later ones in the same run do not; quitting (or logging out)
+ends it. XrayBar starts at login, hence "once per login".
+→ Not `shared: true`: that puts the credential in the login session's pool, where other rights
+that accept a shared admin credential could use it. Here only a holder of XrayBar's
+authorization can, i.e. code inside the XrayBar process.
+→ What an attacker running as the user gains: nothing new unless it gets into the XrayBar
+process; even then root runs only a root-owned xray with a root-written log section (D38).
+→ `Helper.outdated` also reads the right (`AuthorizationRightGet`, no privileges needed): a
+right with a timeout means *Update Helper (Required)*, which rewrites it (D43).
+→ Without the helper nothing changes: the administrator prompt comes on every Connect.
+→ To verify live: after updating, Connect asks once; Disconnect and Connect, or choosing
+another server and Reconnect, do not ask; Quit and reopen asks again.

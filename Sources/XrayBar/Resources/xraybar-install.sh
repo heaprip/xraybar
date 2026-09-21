@@ -82,7 +82,9 @@ EOF
 chown root:wheel "$PLIST"
 chmod 644 "$PLIST"
 
-# Every Connect authenticates (timeout 0, not shared); any admin user of this Mac may connect.
+# Any admin user of this Mac may connect. Not shared: the credential stays in the one
+# authorization XrayBar keeps while it runs, so Touch ID is asked once per app run, i.e. per
+# login, and no other right or process can use it. No timeout: valid for that run (D44).
 security authorizationdb write "$RIGHT" >/dev/null <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -91,7 +93,6 @@ security authorizationdb write "$RIGHT" >/dev/null <<EOF
     <key>class</key><string>user</string>
     <key>group</key><string>admin</string>
     <key>shared</key><false/>
-    <key>timeout</key><integer>0</integer>
     <key>allow-root</key><false/>
     <key>comment</key><string>Connect XrayBar: start Xray with a TUN interface as root.</string>
 </dict>

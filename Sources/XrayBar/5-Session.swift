@@ -283,12 +283,23 @@ enum Helper {
     static var bundledHelper: URL { Bundle.main.executableURL!.deletingLastPathComponent().appendingPathComponent("XrayBarHelper") }
     static var bundledScript: URL? { Bundle.module.url(forResource: "xraybar-session", withExtension: "sh") }
 
-    /// The installed copies differ from this app's (the app was updated): offer to update.
+    /// The installed copies differ from this app's (the app was updated), or the authorization
+    /// right predates D44 (it had a timeout of 0): offer to update.
     static var outdated: Bool {
         guard installed, let script = bundledScript else { return false }
+        var rule: CFDictionary?
+        let right = AuthorizationRightGet("io.github.heaprip.xraybar.connect", &rule) == errAuthorizationSuccess
         return hash(bundledHelper.path) != hash(installedDir + "/XrayBarHelper")
             || hash(script.path) != hash(installedDir + "/xraybar-session.sh")
+            || !right || (rule as? [String: Any])?["timeout"] != nil
     }
+
+    /// One authorization for the app's lifetime: the helper's check stores the credential in it
+    /// (the right is not shared), so Touch ID is asked at the first Connect of each run (D44).
+    nonisolated(unsafe) private static let authorization: AuthorizationRef? = {
+        var auth: AuthorizationRef?
+        return AuthorizationCreate(nil, nil, [], &auth) == errAuthorizationSuccess ? auth : nil
+    }()
 
     private static func hash(_ path: String) -> String? {
         (try? Data(contentsOf: URL(fileURLWithPath: path))).map { SHA256.hash(data: $0).description }
@@ -301,14 +312,12 @@ enum Helper {
     /// check with the system dialog. Blocks until the helper answers.
     static func request(_ body: [String: Any], authorize: Bool) throws {
         var body = body
-        var auth: AuthorizationRef?
         if authorize {
-            guard AuthorizationCreate(nil, nil, [], &auth) == errAuthorizationSuccess, let auth else { throw failure("Authorization failed") }
+            guard let auth = authorization else { throw failure("Authorization failed") }
             var external = AuthorizationExternalForm()
             AuthorizationMakeExternalForm(auth, &external)
             body["auth"] = withUnsafeBytes(of: &external) { Data($0) }.base64EncodedString()
         }
-        defer { if let auth { AuthorizationFree(auth, []) } }   // must outlive the helper's check
 
         let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw failure("socket failed") }

@@ -61,7 +61,7 @@ For development, `swift run` works too.
    folder, the only place XrayBar runs it from as root. With v2rayN installed, *Copy Xray
    from v2rayN…* does the same with its copy; until then the routing data comes from v2rayN.
 3. **Connect.** macOS asks for your administrator password: a TUN interface needs root.
-   *Use Touch ID to Connect…* installs a small root-owned helper once; after that, Touch ID.
+   *Use Touch ID to Connect…* installs a small root-owned helper once; after that, Touch ID once per login.
 4. **Forget about it.** *Connect at Launch* (on by default) plus *Open at Login*: the Mac starts,
    you touch the sensor, you're connected.
 

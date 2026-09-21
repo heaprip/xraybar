@@ -367,8 +367,8 @@ final class AppModel {
         let a = Self.newAlert()
         a.messageText = Helper.installed ? "Update the helper?" : "Use Touch ID to connect?"
         a.informativeText = "XrayBar installs a small helper that runs as root (in /Library/Application Support/XrayBar "
-            + "and /Library/LaunchDaemons). After that, each Connect asks for Touch ID or your password in a "
-            + "system dialog. Diagnostics › Uninstall Helper removes it. You will be asked for your password once now."
+            + "and /Library/LaunchDaemons). After that, Connect asks for Touch ID or your password in a "
+            + "system dialog, once while XrayBar runs. Diagnostics › Uninstall Helper removes it. You will be asked for your password once now."
         a.addButton(withTitle: Helper.installed ? "Update" : "Install")
         a.addButton(withTitle: "Cancel")
         guard a.runModal() == .alertFirstButtonReturn, runHelperInstall() else { return }
