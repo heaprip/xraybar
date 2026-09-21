@@ -2,10 +2,10 @@
 
 **English** · [Русский](ru/ROADMAP.md)
 
-## Stage 0 — feasibility (done, 2026-09-21)
+## Stage 0 — feasibility (done, 2026-09-15)
 - Xray native TUN on macOS validated with a standalone PoC on real traffic (see D1–D3).
 
-## Stage 1 — Connect from the menu (done, 2026-09-21)
+## Stage 1 — Connect from the menu (done, 2026-09-15)
 - Menu: status, Connect/Disconnect, profile picker, routing set picker, log, Quit.
 - Profiles: VLESS (Reality/TLS, raw). Import `vless://` from the clipboard.
 - One-time read-only import of profiles and routing sets from v2rayN.

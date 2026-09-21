@@ -3,7 +3,7 @@
 Short records of decisions and the evidence behind them. Newest last.
 Format: context → decision → consequences.
 
-## D1. Xray native TUN, no sing-box or tun2socks (2026-09-21)
+## D1. Xray native TUN, no sing-box or tun2socks (2026-09-15)
 
 v2rayN ≤ 7.23 on macOS always ran TUN through sing-box and piped traffic over a local
 SOCKS hop into xray (`ConfigHandler.GetPreSocksItem` forced "legacy protect" on non-Windows).
@@ -14,7 +14,7 @@ geosite/geoip routing, UDP/QUIC, DNS hijack on port 53.
 
 → Xray-core is the only data plane. The `tun` inbound installs the routes itself.
 
-## D2. No `process` routing rules (2026-09-21)
+## D2. No `process` routing rules (2026-09-15)
 
 Xray 26.5.9 on darwin logs `process lookup is not supported on this platform` for every
 connection that reaches a `process` rule; the rule never matches. Loop prevention is done
@@ -23,7 +23,7 @@ Xray 26.9.9 appears to add darwin support; revisit when needed.
 
 → The generator emits no `process` rules.
 
-## D3. System DNS is set explicitly while connected (2026-09-21)
+## D3. System DNS is set explicitly while connected (2026-09-15)
 
 The `dns` field of the `tun` inbound has no effect on macOS: the system resolver stays on
 the LAN router (192.168.1.1), which is reached via the more specific LAN route, so DNS
@@ -33,7 +33,7 @@ bypasses the tunnel. Same behaviour observed in v2rayN.
 that route into the tunnel (hijacked to Xray's DNS module); on disconnect it restores the
 previous value.
 
-## D4. Root via an admin prompt per connect, for now (2026-09-21)
+## D4. Root via an admin prompt per connect, for now (2026-09-15)
 
 Creating a utun needs root. Options: password on every connect (`osascript … with
 administrator privileges`), a sudoers rule, or a LaunchDaemon helper.
@@ -44,32 +44,32 @@ when the app asks, when the app process dies, or when Xray exits, so Disconnect 
 second prompt and nothing is left orphaned.
 → Stage 3: replace with a LaunchDaemon helper.
 
-## D5. PIDs are never found by pattern (2026-09-21)
+## D5. PIDs are never found by pattern (2026-09-15)
 
 The PoC stop script matched `xray run -c` and killed v2rayN's xray instead of its own,
 leaving its routes in place and breaking v2rayN ("failed to add system route … file exists").
 
 → Only the PID of the process the session script itself started is ever signalled.
 
-## D6. Routing rules use v2rayN's rule shape (2026-09-21)
+## D6. Routing rules use v2rayN's rule shape (2026-09-15)
 
 `RulesItem` (domain, ip, port, network, protocol, outboundTag, enabled, remarks) is simple,
 and keeping it lets existing v2rayN routing sets and runetfreedom templates import as-is.
 One UI rule expands into separate Xray rules for domain and ip (v2rayN `GenRoutingUserRule`).
 
-## D7. Language and size (2026-09-21)
+## D7. Language and size (2026-09-15)
 
 Swift + AppKit (`NSStatusItem`/`NSMenu`), SwiftUI only for editor windows, Swift Package
 Manager, Command Line Tools only (no Xcode). macOS 14+. Tests with Swift Testing.
 Source is a few numbered files read in order; budget enforced by `scripts/audit.sh`.
 
-## D8. Stage-1 assets come from an existing Xray install (2026-09-21)
+## D8. Stage-1 assets come from an existing Xray install (2026-09-15)
 
 Until XrayBar ships its own verified copy, the xray binary and `.dat` files are taken
 from a configurable directory (default: v2rayN's `bin`). Known limitation: that directory
 is user-writable, see `docs/SECURITY.md`.
 
-## D9. MIT license; v2rayN is a behaviour reference, not a code source (2026-09-21)
+## D9. MIT license; v2rayN is a behaviour reference, not a code source (2026-09-15)
 
 The author wants a permissive license (MIT/Apache). v2rayN is GPL-3.0, so translating its
 code would make XrayBar a derivative work. What XrayBar needs from v2rayN is behaviour
@@ -81,24 +81,24 @@ Xray's documentation and observed configs, never translated line by line (CLAUDE
 Stage-1 code was reviewed against this rule and its "ported from" wording removed.
 Not legal advice; if the project gains contributors, keep this rule in review.
 
-## D10. Docs: English primary, Russian mirror (2026-09-21)
+## D10. Docs: English primary, Russian mirror (2026-09-15)
 
 → `README.md` + `docs/*.md` in English; `README.ru.md` + `docs/ru/*.md` in Russian for README,
 PRINCIPLES, SECURITY, AUDIT and ROADMAP, linked by a language line at the top of each file
 (the common GitHub convention; the wiki is not versioned with the code, so it is not used).
 DECISIONS stays English only. Both languages change in the same commit.
 
-## D11. Root session log is admin-readable only (2026-09-21)
+## D11. Root session log is admin-readable only (2026-09-15)
 
 The Xray log lists every host visited. → `/var/run/xraybar/xray.log` is `root:admin 0640`.
 
-## D12. The root script is parsed whole before it runs (2026-09-21)
+## D12. The root script is parsed whole before it runs (2026-09-15)
 
 bash reads a script file incrementally while executing it. Rebuilding the app during a
 session replaces the file under a running root shell, which would then continue at its old
 byte offset in the new file. → The script body is a single `{ … }` block ending in `exit`.
 
-## D13. Errors-only log by default; root PATH pinned (2026-09-21)
+## D13. Errors-only log by default; root PATH pinned (2026-09-16)
 
 With the access log on, a few minutes of browsing produced ~300 lines, one per connection.
 → Default `loglevel: error`, `access: none`. A **Detailed Log** menu toggle restores
@@ -108,7 +108,7 @@ The root script accepts only empty or `"none"` log paths.
 → Tests run through `scripts/test.sh`: CLT's SwiftPM builds the test target's emit-module job
 without the Swift Testing macro plugin; the script passes the plugin path explicitly.
 
-## D14. Clean up after sessions that died (2026-09-21)
+## D14. Clean up after sessions that died (2026-09-16)
 
 `/var/run` is emptied at boot, so a DNS backup kept there is lost on power loss while
 connected, leaving the Wi-Fi DNS overridden with nothing to restore it from. A root script
@@ -123,7 +123,7 @@ Settings…** while leftovers exist. A stale xray is stopped only if its PID, re
 session, still runs `xray run -c /var/run/xraybar/config.json` (PIDs can be reused).
 → The root-owned config copy (it holds credentials) is deleted when a session ends.
 
-## D15. XrayBar's own Xray and routing data, verified, on request (2026-09-21)
+## D15. XrayBar's own Xray and routing data, verified, on request (2026-09-16)
 
 Depending on v2rayN's `bin` ties XrayBar to another app's update cycle (v2rayN 7.24.9 broke
 TUN) and to files nobody verified.
@@ -138,7 +138,7 @@ every file passes. Ephemeral URLSession. This file (`7-Assets.swift`) is the onl
 integrity in transit, not upstream honesty (SECURITY).
 → Until the first download, v2rayN's copy is used, as before (D8).
 
-## D16. QR codes with system frameworks only (2026-09-21)
+## D16. QR codes with system frameworks only (2026-09-16)
 
 → Share: `Import.link(for:)` writes the standard `vless://` link; CoreImage's QR generator
 draws it inside a plain `NSAlert` with *Copy Link*. Import: *Import from Clipboard* accepts a
@@ -146,7 +146,7 @@ link or a copied image; *Import QR Code from Image…* takes a file. Decoding is
 `VNDetectBarcodesRequest`, on-device. No screen scanning (it would need the Screen Recording
 permission); a screenshot copied to the clipboard covers that case.
 
-## D17. Long menu sections, removal, no editors (2026-09-21)
+## D17. Long menu sections, removal, no editors (2026-09-17)
 
 The author decided editor windows are not needed. Imported lists grow (4 servers, 9 routing
 sets after a v2rayN import), and duplicate names were indistinguishable.
@@ -158,7 +158,7 @@ rest move to an "Other …" submenu (the Wi-Fi menu pattern; NSMenu has no colla
 → Downloads retry twice on HTTP 5xx or network errors (GitHub returned 504 in testing).
 → Until XrayBar is a bundled .app, alerts use an SF Symbol as the app icon.
 
-## D18. QR import by scanning the screen with Apple's screencapture (2026-09-21)
+## D18. QR import by scanning the screen with Apple's screencapture (2026-09-17)
 
 Saving a screenshot to a file to import a QR code is the most common annoyance in clients.
 → *Scan QR Code on Screen…* runs `/usr/sbin/screencapture -i -x <temp file>`: the system
@@ -166,7 +166,7 @@ crosshair, the user selects the code, Vision decodes it, the file is deleted. Xr
 capture the screen itself and asks for no Screen Recording permission of its own. It replaces
 *Import QR Code from Image…* (open the image in Preview and scan it instead).
 
-## D19. Tunnel exclusions by subtracting from the TUN routes (2026-09-21)
+## D19. Tunnel exclusions by subtracting from the TUN routes (2026-09-17)
 
 Some networks must not enter Xray at all (a work network behind another VPN, an unusual LAN).
 A `direct` rule is not enough: that traffic still passes through the tunnel and Xray.
@@ -178,7 +178,7 @@ minimal list (one excluded address → 32 routes). Excluded networks keep their 
 route. Same idea as v2rayN's RouteExcludeAddress; written independently (`CIDR` in 4-Config).
 IPv6 exclusions wait for IPv6 routing (stage 3).
 
-## D20. App bundle now; bundle ID is a placeholder (2026-09-21)
+## D20. App bundle now; bundle ID is a placeholder (2026-09-17)
 
 Without a bundle, alerts showed a generic icon, macOS attributes permissions (e.g. screen
 capture for QR scanning) to the terminal that launched the binary, and login items are
@@ -190,7 +190,7 @@ Contents/Resources where SwiftPM's accessor looks) and signs it ad hoc. Menu gai
 → `io.github.xraybar.XrayBar` is a placeholder identifier; change it to a domain the project
 controls before any public release.
 
-## D21. Keychain waits for stage 3; generated config deleted once running (2026-09-21)
+## D21. Keychain waits for stage 3; generated config deleted once running (2026-09-17)
 
 Keychain items are bound to the app's code signature. With an ad-hoc signature every rebuild
 is a "different app", so macOS would ask for Keychain access after each build, and the
@@ -199,7 +199,7 @@ generated config would still hold the same credentials in plain text while conne
 deleted as soon as the root session runs (it uses its own root-only copy, itself deleted when
 the session ends); `library.json` stays mode 0600.
 
-## D22. Pin the tested Xray release and its hash; refuse Xray too old for TUN (2026-09-21)
+## D22. Pin the tested Xray release and its hash; refuse Xray too old for TUN (2026-09-18)
 
 Since 26.5 every Xray release is marked *pre*release on GitHub, so `releases/latest` served
 26.3.27 (March). That version has no `autoSystemRoutingTable`/`autoOutboundsInterface`; Xray
@@ -217,7 +217,7 @@ a same-origin checksum; newer Xray ships with a new XrayBar version after testin
 for XrayBar (screencapture runs on its behalf). Alternative with no permission: ⌘⇧⌃4 copies
 a selection to the clipboard, then *Import from Clipboard*.
 
-## D23. User-chosen Xray versions with a trial and a way back (2026-09-21)
+## D23. User-chosen Xray versions with a trial and a way back (2026-09-18)
 
 The author preferred choosing newer Xray releases over getting only versions blessed by
 XrayBar, and wanted to try one safely and return to a working one (something v2rayN lacks).
@@ -236,7 +236,7 @@ app quiet (PRINCIPLES 3). A failure can also be the server's; the alert says wha
 are independent settings.
 → Size budget raised from 1200 to 1400 Swift lines for this feature (1264 now).
 
-## D24. Screen QR via the system content picker; menu regrouped; tunnel conflict check (2026-09-21)
+## D24. Screen QR via the system content picker; menu regrouped; tunnel conflict check (2026-09-18)
 
 `screencapture` run by the bundled app made macOS ask for Screen Recording on every scan:
 TCC binds the grant to the app's designated requirement, which for an ad-hoc signature is the
@@ -257,7 +257,7 @@ Connecting while v2rayN's TUN was on failed deep in the root session with a raw
 → Before asking for the password, Connect checks which interface carries 1.1.1.1; if it is a
 utun that is not ours, it says another VPN/TUN is active and to turn it off.
 
-## D25. App icon drawn from source at build time (2026-09-21)
+## D25. App icon drawn from source at build time (2026-09-18)
 
 Without an .icns the bundle showed a blank placeholder in Spotlight and Finder. A committed
 .icns would be an opaque binary in a repository meant to be read.
@@ -266,7 +266,7 @@ Apple's icon grid) into an .iconset; `make-app.sh` runs it and `iconutil` builds
 → Imports now name what was recognized, including servers that were already in the list, so a
 QR scan of an existing server visibly succeeds.
 
-## D26. Correction to D24: the picker works, but macOS still shows its prompt (2026-09-21)
+## D26. Correction to D24: the picker works, but macOS still shows its prompt (2026-09-18)
 
 Observed on macOS 26 (system log, replayd/tccd): presenting `SCContentSharingPicker` from an
 app without the standing permission makes TCC show its "would like to record this computer's
@@ -280,7 +280,7 @@ capture now says so and points to ⌘⇧⌃4 + Import from Clipboard.
 → The prompt can be dismissed with *Deny*; the permission is not needed and should stay off.
 D24's "no prompt" statement was wrong.
 
-## D27. No screen capture in XrayBar at all (2026-09-21)
+## D27. No screen capture in XrayBar at all (2026-09-19)
 
 Even with the system picker (D24, D26), macOS 26 showed two system prompts per scan ("would
 like to record…", "requesting to bypass the system private window picker…"), and the capture
@@ -291,7 +291,7 @@ clipboard, and *Import Link or QR Code from Clipboard* accepts that image or a v
 The menu title and the "nothing to import" message say both work. `audit.sh` expects no
 screen-capture APIs.
 
-## D28. Stage 3: a root-owned LaunchDaemon helper, Touch ID per Connect (2026-09-21)
+## D28. Stage 3: a root-owned LaunchDaemon helper, Touch ID per Connect (2026-09-19)
 
 Stage 1–2 run the session script from the app bundle through an admin prompt that accepts
 only a password, and user-level malware could alter that script before it runs as root.
@@ -315,7 +315,7 @@ installed copies and offers *Update Helper…* when they differ. Without the hel
 works as before (admin prompt per Connect).
 → Still from user space: the xray binary and the config (validated by the script as before).
 
-## D29. A panel instead of a menu (2026-09-21)
+## D29. A panel instead of a menu (2026-09-19)
 
 An NSMenu closes after every click; the author wanted to pick a server and a routing set in
 one go, closing only by clicking outside or on the icon, like the Wi-Fi and Control Center
@@ -332,7 +332,7 @@ in the panel instead of an alert.
 the App holds the model as a constant and row hover lives in the model.
 → App size budget 1400 → 1500 (1443 now).
 
-## D30. Panel styled after the system's Wi-Fi/Bluetooth modules; a knowing HIG deviation (2026-09-21)
+## D30. Panel styled after the system's Wi-Fi/Bluetooth modules; a knowing HIG deviation (2026-09-20)
 
 The HIG (The menu bar › Menu bar extras) says: "Display a menu — not a popover — when people
 click your menu bar extra. Unless the app functionality you want to expose is too complex for a
@@ -348,7 +348,7 @@ kept active; MenuBarExtra's own background follows window activity and looked op
 → Reference for visuals: Apple Design Resources (macOS UI kit). If a future macOS restyles its
 modules, follow it; the HIG's own preference, a plain menu, remains the fallback.
 
-## D31. Libraries allowed; Control Center look from MacControlCenterUI's measurements (2026-09-21)
+## D31. Libraries allowed; Control Center look from MacControlCenterUI's measurements (2026-09-20)
 
 The author clarified that "minimal" means the app itself, not zero dependencies (PRINCIPLES 2
 and CLAUDE.md updated). The obvious library for a Control Center–style panel is
@@ -364,7 +364,7 @@ drawn by the system (replaces D30's NSVisualEffectView workaround).
 → If the project ever requires Xcode, switching to the package itself is a small change.
 → App size budget 1500 → 1600 (1513 now): the Control Center panel and its measurements.
 
-## D32. Panel rows are not Buttons; make-app always recompiles (2026-09-21)
+## D32. Panel rows are not Buttons; make-app always recompiles (2026-09-20)
 
 Live on macOS 26 the rows were squeezed to ~19 pt (icons overlapping) although the same view
 laid out at 30 pt in an NSHostingView: inside a MenuBarExtra window macOS restyles `Button`s,
