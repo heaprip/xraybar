@@ -571,3 +571,24 @@ right with a timeout means *Update Helper (Required)*, which rewrites it (D43).
 → Without the helper nothing changes: the administrator prompt comes on every Connect.
 → To verify live: after updating, Connect asks once; Disconnect and Connect, or choosing
 another server and Reconnect, do not ask; Quit and reopen asks again.
+
+## D45. Server credentials in the keychain, one item (2026-09-21)
+
+D21 postponed the keychain because an ad-hoc signed app is a "new app" after every build, so
+macOS asks again for access. The author expects most users to download CI builds rather than
+build it themselves, so the question comes once per app update, which is acceptable (and with
+a Developer ID signature, later, not at all).
+→ Only the VLESS id of each server moves: it is the credential. Address, port, Reality public
+key, short id and SNI stay in `library.json`; they do not grant access without the id, and the
+file stays readable for audit.
+→ One generic password item in the login keychain (service `io.github.heaprip.xraybar`,
+account `server-credentials`, label "XrayBar server credentials") holds `{profile id: VLESS id}`
+as JSON: one access prompt after an update, not one per server. It is rewritten only when the
+ids change.
+→ Load reads the item first; ids still in the file are moved out on the first launch. If the
+keychain cannot be read (access denied, locked) or written, nothing is lost: ids stay in, or
+are written to, `library.json` as before, and Connect explains when an id is missing.
+→ Not moved: the generated `config.json` while connecting (deleted once the root session has
+its own copy, D21) and the root copy in `/var/run/xraybar` (root-only, deleted at the end).
+→ Checked here: the keychain calls on a throwaway item (add, update, read, delete). Not yet
+checked live: the migration and the access prompt of a rebuilt app. Swift budget 1600 → 1700.

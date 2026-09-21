@@ -60,6 +60,10 @@ final class Session {
     /// `library.settings.xrayBinary` is the resolved xray from the root-owned store (AppModel).
     func connect(_ library: Library) {
         guard let profile = library.profile else { return fail("Add a profile first.") }
+        guard !profile.uuid.isEmpty else {
+            return fail("The server's credentials are in your keychain, which XrayBar could not read. "
+                        + "Quit and reopen XrayBar, then allow access when macOS asks.")
+        }
         guard let xray = library.settings.xrayBinary else {
             return fail("No Xray installed yet. Choose Xray › Download \(Assets.testedXray), or Copy Xray from v2rayN.")
         }

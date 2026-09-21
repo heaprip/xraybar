@@ -25,7 +25,7 @@ Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modif
 | Files written | `~/Library/Application Support/XrayBar/` (library, generated config, stop file, `core/` with the `.dat` files, `download/` while a download waits for installation); `/Library/Application Support/XrayBar/xray/` (root: installed Xray versions; kept when the helper is uninstalled); `/var/run/xraybar/` (root: config copy while connected, pids; `/var/db/xraybar/dns.saved` survives reboots; log readable by admin users only, errors only unless Detailed Log is on) | `2-Store.swift`, script |
 | Files read | the above; optionally v2rayN's database for one-time import (read-only); the clipboard only when you choose *Import Link or QR Code from Clipboard* (QR decoded on-device by Vision; the app never captures the screen) | `3-Import.swift`, `6-Actions.swift` |
 | Processes | the admin prompt (`NSAppleScript`), `xray run -test` for validation; `ditto` to unzip and `xray version` after a download; `route -n get` before Connect (is another VPN active?) | `5-Session.swift`, `7-Assets.swift` |
-| Secrets | profiles are stored as plain JSON (mode 600) in stage 1; Keychain is planned | `2-Store.swift` |
+| Secrets | each server's VLESS id (its credential) is kept in one login-keychain item, "XrayBar server credentials"; `library.json` (mode 600) holds the rest. If the keychain cannot be read or written, the ids stay in `library.json`. While connecting, the generated config (mode 600) holds them until the root session has its own copy | `2-Store.swift` |
 
 Nothing else: no telemetry, no crash reporting, no update checks, no analytics.
 
