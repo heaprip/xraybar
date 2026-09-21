@@ -7,8 +7,7 @@
 маршрутизацией по geosite/geoip идёт через один процесс, без посредников.
 
 <p align="center">
-  <img src="docs/images/menu.png" width="413" alt="Меню XrayBar: подключено, выбор сервера и набора правил">
-  <img src="docs/images/menu-option.png" width="494" alt="То же меню с зажатым Option: технические подробности и пункты Remove">
+  <img src="docs/images/menus.png" width="931" alt="Меню XrayBar и то же меню с зажатым Option: технические подробности и пункты Remove">
 </p>
 <p align="center"><sub>Меню и то же меню с зажатым <b>Option</b> (демо-серверы).</sub></p>
 

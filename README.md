@@ -7,8 +7,7 @@ with its **native TUN**: all traffic, routed by geosite/geoip rules, through one
 with nothing else in between.
 
 <p align="center">
-  <img src="docs/images/menu.png" width="413" alt="XrayBar menu: connected, server and routing choices">
-  <img src="docs/images/menu-option.png" width="494" alt="The same menu with Option held: technical details and Remove items">
+  <img src="docs/images/menus.png" width="931" alt="XrayBar menu, and the same menu with Option held: technical details and Remove items">
 </p>
 <p align="center"><sub>The menu, and the same menu with <b>Option</b> held (demo servers).</sub></p>
 
