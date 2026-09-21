@@ -1,14 +1,17 @@
 #!/bin/bash
 # Builds build/XrayBar.app from source: release build, app bundle, ad-hoc signature.
 # Command Line Tools only. Install by copying the app to /Applications.
+# UNIVERSAL=1 builds for Apple silicon and Intel in one binary; that needs Xcode (the release CI).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 # SwiftPM (CLT, new build system) sometimes misses a source edited moments before a build;
 # refreshing the timestamps makes the release build always compile what is on disk.
 touch Sources/*/*.swift Sources/XrayBar/Resources/*
-swift build -c release
-bin=$(swift build -c release --show-bin-path)
+arch=()
+[[ -n ${UNIVERSAL:-} ]] && arch=(--arch arm64 --arch x86_64)
+swift build -c release ${arch[@]+"${arch[@]}"}
+bin=$(swift build -c release ${arch[@]+"${arch[@]}"} --show-bin-path)
 app=build/XrayBar.app
 
 rm -rf "$app"
@@ -31,6 +34,9 @@ rm -rf "$(dirname "$iconset")"
 # is detectable with `codesign --verify`. Not a Developer ID; see docs/SECURITY.md.
 codesign --force --sign - "$app"
 codesign --verify --strict "$app"
+# The session script finds the event watcher at this path (D42); fail here, not at Connect.
+res="$app/Contents/Resources/XrayBar_XrayBar.bundle/Contents/Resources"
+[[ -f $res/xraybar-session.sh && -x $res/../../../../MacOS/XrayBarHelper ]] || { echo "unexpected bundle layout"; exit 1; }
 
 echo "Built $app"
 echo "Install: rm -rf /Applications/XrayBar.app && cp -R $app /Applications/"

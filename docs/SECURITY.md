@@ -8,7 +8,10 @@ does, what it can and cannot protect against, and how to check it yourself.
 
 ## Trust model in one paragraph
 
-Don't trust binaries: build from source (`swift build`, ~30 s, Command Line Tools only).
+Don't trust binaries you cannot trace: build from source (`scripts/make-app.sh`, Command Line
+Tools only), or take a release, which CI builds from the tagged commit and attests
+(`gh attestation verify XrayBar-x.y.z.pkg -R heaprip/xraybar` proves which workflow and commit
+produced the file; it does not prove the code is benign, reading it does).
 Don't trust the author's word about the source: it is small enough to read, and
 `scripts/audit.sh` plus `docs/AUDIT.md` let you (or an AI model you run) check it.
 Don't trust downloads: Xray-core and `.dat` files are verified against upstream checksums.
@@ -67,7 +70,9 @@ Does not protect against (known limitations, stage 1):
 `scripts/make-app.sh` signs the bundle ad hoc. `codesign --verify --strict XrayBar.app` then
 tells you whether anything in it, including the root script, changed since it was built. An
 ad-hoc signature carries no identity: whoever can modify the bundle can also re-sign it, so it
-detects accidents and naive tampering, not a determined local attacker (stage 3 addresses that).
+detects accidents and naive tampering, not a determined local attacker. There is no Developer
+ID and no notarization (D48): macOS asks you to allow the first open, and the keychain item
+asks once more after each update, since an ad-hoc signed update is a different app to it.
 Open at Login uses a standard login item (System Settings › General › Login Items).
 
 ## How to verify

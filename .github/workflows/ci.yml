@@ -1,0 +1,25 @@
+# Every push to main and every pull request: build, tests, the audit inventory and budget,
+# shellcheck on everything that runs as root, and the app bundle. Read-only token.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # make-app.sh numbers builds by commit count
+      - run: swift --version
+      - run: swift build
+      - run: scripts/test.sh
+      - run: scripts/audit.sh
+      - name: shellcheck
+        run: |
+          brew install shellcheck
+          shellcheck -S warning Sources/XrayBar/Resources/*.sh scripts/*.sh
+      - run: scripts/make-app.sh

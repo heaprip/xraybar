@@ -628,3 +628,26 @@ key must still occur in the sources. It cannot find English texts that have no t
 CLAUDE.md asks for an entry with every new string. Low-level errors (socket, HTTP codes) and
 server names stay as they are.
 → `swift run` has no bundle, so it shows English.
+
+## D48. Release builds from CI, ad hoc, with a provenance attestation (2026-09-21)
+
+Until now releases were source only ("build it yourself"). The author expects that few users
+will build it and wants a download, as with most software they use from GitHub. There is no
+Developer ID and none is planned (no App Store either).
+→ `.github/workflows/ci.yml`: every push to main and every pull request builds, runs the tests,
+`audit.sh`, shellcheck on the root scripts, and `make-app.sh`, on GitHub's macOS 26 runner.
+→ `.github/workflows/release.yml`: a tag `vX.Y.Z` (it must match `CFBundleShortVersionString`)
+builds a universal app (`UNIVERSAL=1 make-app.sh`, Apple silicon + Intel, needs Xcode, which
+the runner has), packages `XrayBar-x.y.z.pkg` (installs into /Applications; not relocatable, so
+it never "upgrades" a copy in a build folder) and `XrayBar-x.y.z.zip`, writes `SHA256SUMS`,
+attests both files with `actions/attest-build-provenance`, and publishes a prerelease with the
+version's section of `CHANGELOG.md` as notes.
+→ Actions are pinned by commit SHA; the jobs get only the permissions they use.
+→ Ad hoc, not notarized: the first open needs *Open Anyway* in System Settings (once per
+downloaded `.pkg`; what it installs is not quarantined), and the keychain item asks once after
+each update (D45). The attestation is what a signature cannot give here: `gh attestation
+verify` shows that a file was built by this workflow from a given commit. It says nothing
+about the code itself; reading it and `audit.sh` still do.
+→ README: icon, badges, install from Releases with the Gatekeeper steps and verification, build
+from source, uninstall (every file XrayBar leaves), troubleshooting. A bug report template;
+security reports go through GitHub's private vulnerability reporting.

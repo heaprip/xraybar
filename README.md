@@ -1,6 +1,13 @@
-# XrayBar
-
-**English** · [Русский](README.ru.md)
+<p align="center"><img src="docs/images/icon.png" width="128" alt=""></p>
+<h1 align="center">XrayBar</h1>
+<p align="center">A small, native macOS menu-bar app for Xray-core's native TUN.</p>
+<p align="center">
+  <a href="https://github.com/heaprip/xraybar/actions/workflows/ci.yml"><img src="https://github.com/heaprip/xraybar/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/heaprip/xraybar/releases"><img src="https://img.shields.io/github/v/release/heaprip/xraybar?include_prereleases&sort=semver" alt="Release"></a>
+  <img src="https://img.shields.io/badge/macOS-15%2B-blue" alt="macOS 15+">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
+</p>
+<p align="center"><b>English</b> · <a href="README.ru.md">Русский</a></p>
 
 A small, native macOS menu-bar app that runs [Xray-core](https://github.com/XTLS/Xray-core)
 with its **native TUN**: all traffic, routed by geosite/geoip rules, through one process,
@@ -11,8 +18,9 @@ with nothing else in between.
 </p>
 <p align="center"><sub>The menu, and the same menu with <b>Option</b> held (demo servers).</sub></p>
 
-> Status: early; used daily by the author. Not done yet: IPv6 through
-> the tunnel verified on a real IPv6 network, verified behaviour across sleep/wake and network switches, transports other than raw.
+> Status: early; used daily by the author. Not verified yet: IPv6 through the tunnel on a real
+> IPv6 network, the DNS override across a switch between network services (Wi-Fi to Ethernet).
+> Not done: transports other than raw.
 
 ## How this was built — read this first
 
@@ -40,9 +48,31 @@ or both. XrayBar does one thing and tries to do it the way Apple would:
 a menu like Wi-Fi's, a password prompt when it needs root, and nothing left behind
 when you disconnect. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md).
 
-## Build and install
+## Install
 
-Requirements: macOS 15+, Command Line Tools (`xcode-select --install`). No Xcode.
+Requirements: macOS 15 or later, Apple silicon or Intel. The interface follows the system
+language: English or Russian.
+
+1. Download `XrayBar-x.y.z.pkg` (or the `.zip`) from [Releases](https://github.com/heaprip/xraybar/releases).
+2. Open it. XrayBar is signed ad hoc, not notarized (there is no paid Apple Developer ID), so
+   macOS refuses the first time: click **Done**, then **System Settings › Privacy & Security**,
+   scroll to *"XrayBar… was blocked"*, **Open Anyway**, confirm. For the `.pkg` this is needed
+   once per download; the app it installs into /Applications then opens normally.
+3. Updating: quit XrayBar first. After an update macOS asks once whether XrayBar may use its
+   keychain item: **Always Allow**. If the menu shows *Update Helper (Required)*, choose it.
+
+Check what you downloaded (optional). The checksums come with the release; the attestation
+proves the file was built by this repository's [release workflow](.github/workflows/release.yml)
+from the tagged commit, not uploaded by hand:
+
+```sh
+shasum -a 256 -c SHA256SUMS
+gh attestation verify XrayBar-x.y.z.pkg -R heaprip/xraybar
+```
+
+### Build from source
+
+Command Line Tools are enough (`xcode-select --install`), no Xcode:
 
 ```sh
 scripts/make-app.sh                          # builds build/XrayBar.app (ad-hoc signed)
@@ -50,7 +80,6 @@ cp -R build/XrayBar.app /Applications/       # then open it from /Applications
 ```
 
 For development, `swift run` works too (English only: translations need the app bundle).
-The interface follows the system language: English or Russian.
 
 ## Getting started
 
@@ -81,15 +110,44 @@ Only short, readable code runs as root: [the session script](Sources/XrayBar/Res
 [the helper](Sources/XrayBarHelper/main.swift): the session uses its event watch (it only
 observes), and its Touch ID service is optional.
 
+## Uninstall
+
+1. Disconnect, then *Diagnostics › Uninstall Helper…* if you installed it (removes the helper,
+   its LaunchDaemon and its authorization right).
+2. Quit XrayBar and delete it from /Applications (its Open at Login item goes with it).
+3. What remains:
+   ```sh
+   sudo rm -rf "/Library/Application Support/XrayBar" /var/db/xraybar  # installed Xray, saved DNS
+   rm -rf ~/Library/Application\ Support/XrayBar                       # servers, routing sets, data
+   sudo pkgutil --forget io.github.heaprip.xraybar                      # if installed from the .pkg
+   ```
+   and the keychain item *XrayBar server credentials* (Keychain Access). `/var/run/xraybar` is
+   cleared at restart.
+
+## Troubleshooting
+
+- **No internet after a crash or power loss.** Open XrayBar: it offers *Restore Network
+  Settings*. By hand: `networksetup -setdnsservers Wi-Fi empty`.
+- **"Another VPN or TUN already routes all traffic".** Turn off the other VPN, or v2rayN's TUN mode.
+- **The menu bar icon shows an exclamation mark.** Choose *Update Helper (Required)*: the app
+  was updated, the root helper not yet.
+- **Nothing appears when you open the app.** It is already running (one instance only): look in
+  the menu bar, or quit it first.
+- **Logs.** *Diagnostics › Show Xray Log*, and XrayBar's own:
+  `log show --last 1h --predicate 'subsystem == "io.github.heaprip.xraybar"'`. When reporting an
+  issue, include the macOS version, XrayBar's version (*About XrayBar*) and the relevant log
+  lines, with server addresses removed.
+
 ## Can I trust it?
 
-You shouldn't have to take anyone's word for it. The app is ~1,500 lines of Swift in a handful of
+You shouldn't have to take anyone's word for it. The app is ~1,650 lines of Swift in a handful of
 numbered files meant to be read in order, plus ~260 lines of root scripts and a
 ~150-line root helper, with zero dependencies.
 
 - [docs/SECURITY.md](docs/SECURITY.md) — what it does, threat model, known limitations.
 - `scripts/audit.sh` — deterministic inventory of privilege, processes, network, file writes.
 - [docs/AUDIT.md](docs/AUDIT.md) — review checklist, usable as instructions for an AI model.
+- Release builds come from CI with a provenance attestation (see Install); or build it yourself.
 
 ## Tests
 

@@ -1,0 +1,48 @@
+# A tag vX.Y.Z builds the universal app, packages it as .pkg and .zip, attests where the
+# files came from (gh attestation verify), and publishes a prerelease with CHANGELOG's notes.
+# Ad-hoc signed, not notarized (no Developer ID, D48).
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write     # create the release
+  id-token: write     # sign the provenance attestation
+  attestations: write
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - run: scripts/test.sh
+      - run: scripts/audit.sh
+      - name: Build (Apple silicon + Intel)
+        run: UNIVERSAL=1 scripts/make-app.sh
+      - name: Package
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          plist=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/XrayBar.app/Contents/Info.plist)
+          [[ $plist == "$v" ]] || { echo "tag $GITHUB_REF_NAME, Info.plist $plist"; exit 1; }
+          lipo -archs build/XrayBar.app/Contents/MacOS/XrayBar
+          ditto -c -k --keepParent build/XrayBar.app "build/XrayBar-$v.zip"
+          # Installs into /Applications, never "upgrades" a copy found elsewhere (not relocatable).
+          mkdir build/pkgroot && ditto build/XrayBar.app build/pkgroot/XrayBar.app
+          pkgbuild --analyze --root build/pkgroot build/components.plist
+          for i in 0 1 2 3 4 5; do plutil -replace "$i.BundleIsRelocatable" -bool NO build/components.plist 2>/dev/null || break; done
+          pkgbuild --root build/pkgroot --component-plist build/components.plist --install-location /Applications \
+            --identifier io.github.heaprip.xraybar --version "$v" "build/XrayBar-$v.pkg"
+          (cd build && shasum -a 256 "XrayBar-$v.zip" "XrayBar-$v.pkg" > SHA256SUMS && cat SHA256SUMS)
+          awk -v h="## $v" '$0 == h {f=1; next} /^## / {f=0} f' CHANGELOG.md > build/notes.md
+          [[ -s build/notes.md ]] || { echo "no '## $v' section in CHANGELOG.md"; exit 1; }
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: 'build/XrayBar-*.zip, build/XrayBar-*.pkg'
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          gh release create "$GITHUB_REF_NAME" "build/XrayBar-$v.pkg" "build/XrayBar-$v.zip" build/SHA256SUMS \
+            --prerelease --title "XrayBar $v" --notes-file build/notes.md
