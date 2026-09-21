@@ -23,9 +23,9 @@ Read `docs/PRINCIPLES.md` first. The short version:
 - **Persisted fields added later must be optional** (or decode with a default), so an
   existing `library.json` keeps loading; `Store.load` sets unreadable files aside.
 - **Record decisions** in `docs/DECISIONS.md` (context → decision → consequences), keep
-  `docs/SECURITY.md` in sync with what the code does, and update `docs/ROADMAP.md`.
+  `docs/SECURITY.md` in sync with what the code does, and the README's "Not done yet" line.
 - **Docs are bilingual.** English is primary; `README.ru.md` and `docs/ru/` mirror README,
-  PRINCIPLES, SECURITY, AUDIT and ROADMAP. Update the Russian file in the same commit.
+  PRINCIPLES, SECURITY and AUDIT. Update the Russian file in the same commit.
   `DECISIONS.md` is English only.
 
 Build: `swift build`. Test: `scripts/test.sh` (plain `swift test` hits a CLT plugin bug, see

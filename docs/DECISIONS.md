@@ -416,3 +416,8 @@ right `io.github.heaprip.xraybar.connect`. The install script also removes the p
 items are bound to the bundle ID). Version 0.2.0.
 → Before publishing, history was scanned for personal data: a real server IP used in a CIDR
 test was replaced with 203.0.113.7 (RFC 5737 documentation range) in every commit.
+
+## D37. No roadmap file; no emoji in docs (2026-09-21)
+
+→ The author removed docs/ROADMAP.md: the history and DECISIONS already tell what was done, and a
+roadmap with checkmark emoji added noise. What is not done yet is one line in the README status.

@@ -6,7 +6,8 @@ A small, native macOS menu-bar app that runs [Xray-core](https://github.com/XTLS
 with its **native TUN**: all traffic, routed by geosite/geoip rules, through one process,
 with nothing else in between.
 
-> Status: early, stages 1–3 of [docs/ROADMAP.md](docs/ROADMAP.md) mostly done; used daily by the author.
+> Status: early; used daily by the author. Not done yet: credentials in Keychain, IPv6 through
+> the tunnel, verified behaviour across sleep/wake and network switches, transports other than raw.
 
 ## How this was built — read this first
 
