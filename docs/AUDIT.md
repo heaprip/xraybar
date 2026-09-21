@@ -37,7 +37,7 @@ For each item, answer yes/no with evidence:
 - [ ] Paths to root: `osascript … with administrator privileges` running the session script
       or the install script, and the optional helper (`Sources/XrayBarHelper`), which runs only
       the root-owned session script and only after `AuthorizationCopyRights` succeeds for
-      `io.github.xraybar.connect` (except `--restore`). The install script touches only the four
+      `io.github.heaprip.xraybar.connect` (except `--restore`). The install script touches only the four
       things it lists, and `--uninstall` removes them.
 - [ ] Arguments passed to the script are quoted/validated; no user-controlled string is
       interpolated into a shell command unescaped (profile names, paths, server addresses).

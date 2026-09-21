@@ -406,3 +406,13 @@ was a detour because it was not checked whether SwiftUI menus support alternates
 → With Option held: servers and routing sets turn into "Remove “…”…"; the status line shows
 technical details (tunnel interface, Xray version, DNS, Touch ID or password), as the system
 Wi-Fi menu does; *Share Server…* becomes *Copy Server Link*. The Remove submenu is gone.
+
+## D36. Published as heaprip/xraybar; final identifiers (2026-09-21)
+
+→ Public repository github.com/heaprip/xraybar. Bundle ID `io.github.heaprip.xraybar`
+(replaces the D20 placeholder), helper label `io.github.heaprip.xraybar.helper`, authorization
+right `io.github.heaprip.xraybar.connect`. The install script also removes the pre-release
+`io.github.xraybar.*` helper, plist and right. Open at Login must be enabled again (login
+items are bound to the bundle ID). Version 0.2.0.
+→ Before publishing, history was scanned for personal data: a real server IP used in a CIDR
+test was replaced with 203.0.113.7 (RFC 5737 documentation range) in every commit.

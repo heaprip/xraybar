@@ -61,8 +61,7 @@ scripts/test.sh --integration   # also runs configs from your local v2rayN throu
 
 ## License and credits
 
-MIT, see [LICENSE](LICENSE). The panel's measurements follow
-[MacControlCenterUI](https://github.com/orchetect/MacControlCenterUI) (MIT). Behaviour and formats are modelled on
+MIT, see [LICENSE](LICENSE). Behaviour and formats are modelled on
 [v2rayN](https://github.com/2dust/v2rayN) (no v2rayN code is used). Xray-core is a separate
 program under MPL-2.0. Routing data:
 [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat),

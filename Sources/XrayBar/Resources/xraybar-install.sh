@@ -2,9 +2,9 @@
 # Installs or removes XrayBar's privileged helper (docs/DECISIONS.md D28). Runs as root, once,
 # through the administrator prompt. Installing touches exactly four things:
 #   /Library/Application Support/XrayBar/        XrayBarHelper + xraybar-session.sh (root-owned)
-#   /Library/LaunchDaemons/io.github.xraybar.helper.plist
-#   the authorization right io.github.xraybar.connect (security authorizationdb)
-#   the loaded launchd job io.github.xraybar.helper
+#   /Library/LaunchDaemons/io.github.heaprip.xraybar.helper.plist
+#   the authorization right io.github.heaprip.xraybar.connect (security authorizationdb)
+#   the loaded launchd job io.github.heaprip.xraybar.helper
 # --uninstall removes the same four.
 #
 # Usage: xraybar-install.sh <XrayBarHelper> <xraybar-session.sh>
@@ -17,11 +17,15 @@ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 [[ $(id -u) == 0 ]] || { echo "must run as root" >&2; exit 1; }
 
 DIR="/Library/Application Support/XrayBar"
-LABEL=io.github.xraybar.helper
+LABEL=io.github.heaprip.xraybar.helper
 PLIST=/Library/LaunchDaemons/$LABEL.plist
-RIGHT=io.github.xraybar.connect
+RIGHT=io.github.heaprip.xraybar.connect
 
 launchctl bootout "system/$LABEL" 2>/dev/null || true
+# Builds before the bundle ID was final (D36) used io.github.xraybar.*: remove those too.
+launchctl bootout system/io.github.xraybar.helper 2>/dev/null || true
+rm -f /Library/LaunchDaemons/io.github.xraybar.helper.plist
+security authorizationdb remove io.github.xraybar.connect >/dev/null 2>&1 || true
 
 if [[ ${1:-} == --uninstall ]]; then
     rm -f "$PLIST"

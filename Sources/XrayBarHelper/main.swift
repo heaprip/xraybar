@@ -3,7 +3,7 @@
 // launchd starts it when XrayBar connects to /var/run/xraybar-helper.sock; it exits when idle.
 // One JSON request per connection, one JSON reply:
 //   {"action": "connect", "auth": <AuthorizationExternalForm, base64>, "args": [session args]}
-//       macOS authorizes the connecting user for io.github.xraybar.connect with its own dialog
+//       macOS authorizes the connecting user for io.github.heaprip.xraybar.connect with its own dialog
 //       (Touch ID or password). Then the root-owned session script starts with those arguments,
 //       except the app PID, which is taken from the socket peer, not from the request.
 //   {"action": "restore"}
@@ -15,7 +15,7 @@ import Foundation
 import Security
 
 let script = "/Library/Application Support/XrayBar/xraybar-session.sh"
-let right = "io.github.xraybar.connect"
+let right = "io.github.heaprip.xraybar.connect"
 
 // MARK: Socket from launchd; serve until 20 s without requests.
 

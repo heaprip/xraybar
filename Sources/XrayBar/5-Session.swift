@@ -220,7 +220,7 @@ final class Session {
 
 /// Talks to the installed LaunchDaemon helper (D28) over its socket. Only used when installed.
 enum Helper {
-    static let plist = "/Library/LaunchDaemons/io.github.xraybar.helper.plist"
+    static let plist = "/Library/LaunchDaemons/io.github.heaprip.xraybar.helper.plist"
     static let installedDir = "/Library/Application Support/XrayBar"
     static let socket = "/var/run/xraybar-helper.sock"
     static var installed: Bool { FileManager.default.fileExists(atPath: plist) }

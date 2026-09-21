@@ -62,8 +62,7 @@ scripts/test.sh --integration   # плюс прогон конфигов из в
 
 ## Лицензия и благодарности
 
-MIT, см. [LICENSE](LICENSE). Размеры панели взяты из
-[MacControlCenterUI](https://github.com/orchetect/MacControlCenterUI) (MIT). Поведение и форматы повторяют
+MIT, см. [LICENSE](LICENSE). Поведение и форматы повторяют
 [v2rayN](https://github.com/2dust/v2rayN) (код v2rayN не используется). Xray-core — отдельная
 программа под MPL-2.0. Данные маршрутизации:
 [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat),
