@@ -17,7 +17,7 @@
 
 ## Сборка и запуск
 
-Нужно: macOS 14+, Command Line Tools (`xcode-select --install`). Xcode не нужен.
+Нужно: macOS 15+, Command Line Tools (`xcode-select --install`). Xcode не нужен.
 
 ```sh
 scripts/make-app.sh                          # собирает build/XrayBar.app (ad-hoc подпись)
@@ -32,7 +32,8 @@ cp -R build/XrayBar.app /Applications/       # и запускайте из /App
 `geoip.dat`/`geosite.dat`. Всё сверяется по контрольным суммам. До этого используется установка
 v2rayN (`~/Library/Application Support/v2rayN/bin`). Серверы
 импортируются через **Import Link or QR Code from Clipboard** (скопируйте ссылку `vless://…` или нажмите ⌘⇧⌃4 и
-выделите QR-код — снимок попадёт в буфер обмена) или **Import from v2rayN…** (только чтение). **Share Server…** показывает QR-код. **Remove ›** удаляет серверы и наборы правил. С **Connect at Launch** (включено по умолчанию)
+выделите QR-код — снимок попадёт в буфер обмена) или **Import from v2rayN…** (только чтение). **Share Server…** показывает QR-код. Удерживайте **Option** при открытом меню, чтобы удалить сервер или набор правил, скопировать
+ссылку на сервер или увидеть технические подробности под строкой статуса. С **Connect at Launch** (включено по умолчанию)
 XrayBar при запуске подключается к последнему серверу; вместе с **Open at Login** ничего
 нажимать не нужно.
 

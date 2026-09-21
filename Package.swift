@@ -4,7 +4,7 @@ import PackageDescription
 // No dependencies, by design: see docs/PRINCIPLES.md.
 let package = Package(
     name: "XrayBar",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v15)],   // .v15: menu alternates (Option) in SwiftUI, D35
     targets: [
         .executableTarget(
             name: "XrayBar",

@@ -15,7 +15,7 @@
 
 ## Stage 2 — configurations done properly
 - ✅ QR: show a server as QR (Share Server…); import a link or a QR screenshot (⌘⇧⌃4) from the clipboard (Vision).
-- ✅ Remove servers and routing sets (Remove › in the menu). No editor windows (decided: not needed).
+- ✅ Remove servers and routing sets (hold Option in the menu). No editor windows (decided: not needed).
 - ✅ Own copy of Xray and `.dat` files, downloaded on request, checksum-verified (runetfreedom or Loyalsoldier data).
 - ✅ Several Xray versions side by side; newer releases on request; the first connection with a new
   version is a trial with one-click switch back to the last working one.

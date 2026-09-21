@@ -61,6 +61,13 @@ final class AppModel {
 
     var dataSource: Assets.DataSource { library.settings.dataSource ?? .runetfreedom }
 
+    /// Shown instead of the status line while Option is held, like the system Wi-Fi menu.
+    var details: String {
+        let s = library.settings
+        let tunnel = state == .connected ? "utun77" : "no tunnel"
+        return "\(tunnel) · \(xrayTitle) · DNS \(s.systemDNS.joined(separator: ", ")) · \(Helper.installed ? "Touch ID" : "password")"
+    }
+
     /// "Xray v26.9.9": the version in use.
     var xrayTitle: String {
         library.settings.xrayBinary.map { "Xray " + URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent }
@@ -384,6 +391,13 @@ final class AppModel {
         } catch {
             alert("Import failed", error.localizedDescription)
         }
+    }
+
+    /// Option-alternate of Share Server…: the vless:// link straight to the clipboard.
+    func copyServerLink() {
+        guard let profile = library.profile else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(Import.link(for: profile), forType: .string)
     }
 
     /// The selected server as a QR code and link, e.g. to add it on a phone.

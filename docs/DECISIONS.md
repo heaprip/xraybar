@@ -396,3 +396,13 @@ server unless a restore is pending, no server exists, or another VPN owns the ro
 authorizes (Touch ID with the helper, else the password): an unauthenticated connect would let
 any process of the user make root run an xray binary from a user-writable folder. With
 *Open at Login* the user needs no click, only the one authentication.
+
+## D35. Option alternates back; macOS 15 minimum (2026-09-21)
+
+The author missed the Option-to-remove items of the NSMenu era (D17); D34's *Remove ›* submenu
+was a detour because it was not checked whether SwiftUI menus support alternates. They do:
+`modifierKeyAlternate(.option)`, macOS 15+.
+→ Minimum macOS 14 → 15 (no reason for 14 was ever recorded; the author runs 26).
+→ With Option held: servers and routing sets turn into "Remove “…”…"; the status line shows
+technical details (tunnel interface, Xray version, DNS, Touch ID or password), as the system
+Wi-Fi menu does; *Share Server…* becomes *Copy Server Link*. The Remove submenu is gone.
