@@ -57,7 +57,9 @@ For development, `swift run` works too.
    ⌘⇧⌃4 and select a QR code (the screenshot goes to the clipboard). Or *Import from v2rayN…*
    (read-only).
 2. **Get Xray and routing data.** *Xray › Download v26.9.9* and *Update Routing Data*
-   (checksum-verified). Until then XrayBar uses an existing v2rayN install.
+   (checksum-verified). Installing Xray asks for your password once: it goes into a root-owned
+   folder, the only place XrayBar runs it from as root. With v2rayN installed, *Copy Xray
+   from v2rayN…* does the same with its copy; until then the routing data comes from v2rayN.
 3. **Connect.** macOS asks for your administrator password: a TUN interface needs root.
    *Use Touch ID to Connect…* installs a small root-owned helper once; after that, Touch ID.
 4. **Forget about it.** *Connect at Launch* (on by default) plus *Open at Login*: the Mac starts,
@@ -79,8 +81,8 @@ Only short, readable code runs as root: [the session script](Sources/XrayBar/Res
 
 ## Can I trust it?
 
-You shouldn't have to take anyone's word for it. The app is ~1,400 lines of Swift in a handful of
-numbered files meant to be read in order, plus ~200 lines of root scripts and an optional
+You shouldn't have to take anyone's word for it. The app is ~1,500 lines of Swift in a handful of
+numbered files meant to be read in order, plus ~250 lines of root scripts and an optional
 ~110-line root helper, with zero dependencies.
 
 - [docs/SECURITY.md](docs/SECURITY.md) — what it does, threat model, known limitations.

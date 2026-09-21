@@ -59,7 +59,7 @@ import Testing
 
         let log = try #require(c["log"] as? [String: Any])
         #expect(log["loglevel"] as? String == "error" && log["access"] as? String == "none")
-        #expect(log["error"] == nil)                             // root session rejects file logs
+        #expect(log["error"] == nil)                             // root rewrites the log section anyway (D38)
         var verbose = Settings(); verbose.detailedLog = true
         #expect(XrayConfig.log(verbose)["access"] == nil)
 
@@ -70,6 +70,33 @@ import Testing
         let dns = try #require(c["dns"] as? [String: Any])
         let direct = try #require((dns["servers"] as? [Any])?.first as? [String: Any])
         #expect(direct["domains"] as? [String] == ["geosite:private"])
+    }
+
+    /// The root session replaces the log section with plutil (xraybar-session.sh, D38). The
+    /// rest of the config must come out unchanged, types included, and a hidden log path must not.
+    @Test func configSurvivesRootLogRewrite() throws {
+        let c = XrayConfig.make(profile: profile, routing: .global, settings: Settings())
+        var hidden = c
+        hidden["log"] = ["loglevel": "error", "access": "/tmp/x", "error": "/tmp/y"]
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-plutil.json")
+        defer { try? FileManager.default.removeItem(at: file) }
+        // \u0061ccess is "access": JSON parsers decode it, a grep for "access" would not.
+        let escaped = String(decoding: try XrayConfig.data(hidden), as: UTF8.self)
+            .replacingOccurrences(of: #""access""#, with: #""\u0061ccess""#)
+        try Data(escaped.utf8).write(to: file)
+
+        let plutil = Process()
+        plutil.executableURL = URL(fileURLWithPath: "/usr/bin/plutil")
+        plutil.arguments = ["-replace", "log", "-json", #"{"loglevel":"error","access":""}"#, file.path]
+        try plutil.run()
+        plutil.waitUntilExit()
+        #expect(plutil.terminationStatus == 0)
+
+        let out = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        #expect(out["log"] as? [String: String] == ["loglevel": "error", "access": ""])
+        var rest = out, original = c
+        rest["log"] = nil; original["log"] = nil
+        #expect(try XrayConfig.data(rest) == XrayConfig.data(original))
     }
 
     @Test func validationCopyHasNoTun() {
@@ -99,7 +126,7 @@ struct IntegrationTests {
             let file = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-test.json")
             try XrayConfig.data(config).write(to: file)
             let xray = Process()
-            xray.executableURL = URL(fileURLWithPath: settings.xrayPath)
+            xray.executableURL = URL(fileURLWithPath: Settings.v2rayNXray)
             xray.arguments = ["run", "-test", "-c", file.path]
             xray.environment = ["XRAY_LOCATION_ASSET": settings.assetsDir]
             xray.standardOutput = FileHandle.nullDevice
@@ -131,6 +158,21 @@ struct IntegrationTests {
         #expect(!Assets.version("Xray 26.10.1 (Xray…)").lexicographicallyPrecedes(Assets.minimumXray))
     }
 
+    /// The root-owned store layout (<tag>/xray, D38), newest first, the v2rayN copy last.
+    @Test func installedVersionsInStore() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-store-test")
+        try? FileManager.default.removeItem(at: root)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for tag in ["v26.5.9", Assets.v2rayNTag, "v26.10.1", "empty"] {
+            try FileManager.default.createDirectory(at: root.appendingPathComponent(tag), withIntermediateDirectories: true)
+            guard tag != "empty" else { continue }
+            FileManager.default.createFile(atPath: Assets.xrayPath(tag, in: root), contents: nil,
+                                           attributes: [.posixPermissions: 0o755])
+        }
+        #expect(Assets.installedXray(in: root) == ["v26.10.1", "v26.5.9", Assets.v2rayNTag])
+        #expect(Assets.xrayPath("v26.9.9") == "/Library/Application Support/XrayBar/xray/v26.9.9/xray")
+    }
+
     @Test func checksumMismatchIsRejected() throws {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-sum.txt")
         try Data("hello".utf8).write(to: file)
@@ -150,12 +192,12 @@ struct AssetsDownloadTests {
         defer { try? FileManager.default.removeItem(at: root) }
 
         // The tested version (pinned hash) and one other release (.dgst hash).
-        let tested = try await Assets.installXray(Assets.testedXray, in: root)
-        #expect(Assets.version(try Assets.versionLine(ofXray: tested)) == Assets.version(Assets.testedXray))
+        let tested = try await Assets.downloadXray(Assets.testedXray, in: root)
+        #expect(Assets.version(try Assets.versionLine(ofXray: tested.path)) == Assets.version(Assets.testedXray))
         let available = try await Assets.availableXray()
         #expect(available.contains(Assets.testedXray))
         let other = try #require(available.first { $0 != Assets.testedXray })
-        _ = try await Assets.installXray(other, in: root)
+        _ = try await Assets.downloadXray(other, in: root)
         #expect(Set(Assets.installedXray(in: root)) == [Assets.testedXray, other])
 
         try await Assets.updateData(.runetfreedom, in: root)

@@ -24,7 +24,7 @@ struct AppMenu: View {
         if model.changedWhileConnected && model.state == .connected {
             Button("Reconnect to Apply Changes", systemImage: "arrow.clockwise", action: model.reconnect)
         }
-        if Session.needsRestore && model.tick >= 0 {
+        if model.needsRestore {
             Button("Restore Network Settings…", systemImage: "wrench.and.screwdriver", action: model.restore)
         }
 
@@ -52,9 +52,9 @@ struct AppMenu: View {
         Divider()
         Menu(model.xrayTitle, systemImage: "cpu") { xrayMenu }
         Menu("Diagnostics", systemImage: "stethoscope") { diagnosticsMenu }
-        if !Helper.installed && model.tick >= 0 {
+        if !model.helperInstalled {
             Button("Use Touch ID to Connect…", systemImage: "touchid", action: model.installHelper)
-        } else if Helper.outdated {
+        } else if model.helperOutdated {
             Button("Update Helper…", systemImage: "arrow.clockwise", action: model.installHelper)
         }
         Toggle("Connect at Launch", isOn: Binding(get: { model.connectsAtLaunch }, set: { _ in model.toggleConnectAtLaunch() }))
@@ -92,11 +92,14 @@ struct AppMenu: View {
     @ViewBuilder private var xrayMenu: some View {
         Section("Version") {
             ForEach(model.xrayVersions, id: \.path) { v in
-                Toggle(v.title, isOn: Binding(get: { v.path == model.library.settings.xrayPath },
+                Toggle(v.title, isOn: Binding(get: { v.path == model.xrayInUse },
                                               set: { _ in model.selectXray(v.path) }))
             }
-            if !Assets.installedXray().contains(Assets.testedXray) {
+            if !model.installedXray.contains(Assets.testedXray) {
                 Button("Download \(Assets.testedXray) (tested with XrayBar)", action: model.downloadTestedXray)
+            }
+            if model.v2rayNXrayFound {
+                Button("Copy Xray from v2rayN…", action: model.copyV2rayNXray)
             }
             Button("Check for Newer Versions…", systemImage: "arrow.down.circle", action: model.checkNewerXray)
                 .disabled(model.updating)
@@ -119,7 +122,7 @@ struct AppMenu: View {
         Toggle("Detailed Log", isOn: Binding(get: { model.library.settings.detailedLog == true },
                                              set: { _ in model.toggleDetailedLog() }))
         Button("Show Data Folder", systemImage: "folder", action: model.showDataFolder)
-        if Helper.installed && model.tick >= 0 {
+        if model.helperInstalled {
             Divider()
             Button("Uninstall Helper…", systemImage: "trash", action: model.uninstallHelper)
         }

@@ -53,10 +53,11 @@ struct RoutingSet: Codable, Equatable, Identifiable, Sendable {
 struct Settings: Codable, Equatable, Sendable {
     /// Directory with `geoip.dat` and `geosite.dat` (D8: v2rayN's until XrayBar downloads its own).
     var assetsDir = NSHomeDirectory() + "/Library/Application Support/v2rayN/bin"
+    /// v2rayN's xray: copied into XrayBar's root-owned store on request, never run from here (D38).
     static let v2rayNXray = NSHomeDirectory() + "/Library/Application Support/v2rayN/bin/xray/xray"
-    /// The xray to run: a version XrayBar downloaded (7-Assets), else v2rayN's.
+    /// The xray to run: a version in the root-owned store (7-Assets); older libraries may point
+    /// elsewhere, then the newest installed version is used.
     var xrayBinary: String?
-    var xrayPath: String { xrayBinary ?? Self.v2rayNXray }
     /// The last xray that carried traffic after connecting; the way back from a failed trial (D23).
     var goodXray: String?
     /// Resolver for domains routed direct, and for everything else (through the proxy).

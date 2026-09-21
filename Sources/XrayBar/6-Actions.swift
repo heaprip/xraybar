@@ -14,14 +14,29 @@ final class AppModel {
     private(set) var updating = false
     /// A server or routing change while connected: the menu offers Reconnect.
     private(set) var changedWhileConnected = false
-    /// Bumped after actions that change things the menu reads from disk (helper, versions).
-    private(set) var tick = 0
+    /// What the menu shows from disk, read after each change rather than while the menu draws.
+    private(set) var installedXray = Assets.installedXray()
+    private(set) var v2rayNXrayFound = false
+    private(set) var helperInstalled = false
+    private(set) var helperOutdated = false
+    private(set) var needsRestore = false
+    private(set) var opensAtLogin = false
     @ObservationIgnored let session = Session()
 
     init() {
         state = session.state
         session.onChange = { [weak self] in self?.stateChanged() }
+        refresh()
         DispatchQueue.main.async { self.launched() }
+    }
+
+    private func refresh() {
+        installedXray = Assets.installedXray()
+        v2rayNXrayFound = FileManager.default.isExecutableFile(atPath: Settings.v2rayNXray)
+        helperInstalled = Helper.installed
+        helperOutdated = Helper.outdated
+        needsRestore = Session.needsRestore
+        opensAtLogin = SMAppService.mainApp.status == .enabled
     }
 
     /// At launch: clean up after a session that died, or connect to the last used server so
@@ -65,25 +80,37 @@ final class AppModel {
     var details: String {
         let s = library.settings
         let tunnel = state == .connected ? "utun77" : "no tunnel"
-        return "\(tunnel) · \(xrayTitle) · DNS \(s.systemDNS.joined(separator: ", ")) · \(Helper.installed ? "Touch ID" : "password")"
+        return "\(tunnel) · \(xrayTitle) · DNS \(s.systemDNS.joined(separator: ", ")) · \(helperInstalled ? "Touch ID" : "password")"
+    }
+
+    /// The xray Connect uses: the chosen version if installed, else the newest installed one.
+    var xrayInUse: String? {
+        let paths = installedXray.map { Assets.xrayPath($0) }
+        return paths.first { $0 == library.settings.xrayBinary } ?? paths.first
+    }
+
+    /// The library as Connect sees it, with the xray actually used.
+    private var connectable: Library {
+        var l = library
+        l.settings.xrayBinary = xrayInUse
+        return l
     }
 
     /// "Xray v26.9.9": the version in use.
     var xrayTitle: String {
-        library.settings.xrayBinary.map { "Xray " + URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent }
-            ?? "Xray from v2rayN"
+        xrayInUse.map { "Xray " + Self.xrayName(URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent) }
+            ?? "Xray"
     }
 
-    /// Installed versions and v2rayN's, as (path, title); "works" once it has carried traffic.
+    private static func xrayName(_ tag: String) -> String { tag == Assets.v2rayNTag ? "from v2rayN" : tag }
+
+    /// Installed versions as (path, title); "works" once it has carried traffic.
     var xrayVersions: [(path: String, title: String)] {
-        _ = tick
-        var versions = Assets.installedXray().map { tag in
-            (Assets.xrayPath(tag), tag == Assets.testedXray ? "\(tag) (tested with XrayBar)" : tag)
+        installedXray.map { tag in
+            let path = Assets.xrayPath(tag)
+            let title = tag == Assets.testedXray ? "\(tag) (tested with XrayBar)" : Self.xrayName(tag)
+            return (path, path == library.settings.goodXray ? "\(title) — works" : title)
         }
-        if FileManager.default.isExecutableFile(atPath: Settings.v2rayNXray) {
-            versions.append((Settings.v2rayNXray, "Xray from v2rayN"))
-        }
-        return versions.map { ($0.0, $0.0 == library.settings.goodXray ? "\($0.1) — works" : $0.1) }
     }
 
     // MARK: State
@@ -91,17 +118,17 @@ final class AppModel {
     private func stateChanged() {
         state = session.state
         if state == .connecting { changedWhileConnected = false }
-        tick += 1
+        refresh()
         trialIfNeeded()
         if case .failed(let message) = session.state { alert("Could not connect", message) }
     }
 
     // MARK: Actions
 
-    func connect() { session.connect(library) }
+    func connect() { session.connect(connectable) }
     func disconnect() { session.disconnect() }
-    func reconnect() { session.reconnect(library) }
-    func restore() { session.restore(); tick += 1 }
+    func reconnect() { session.reconnect(connectable) }
+    func restore() { session.restore(); refresh() }
 
     /// A previous session ended without cleaning up (power loss, crash of the root script).
     private func offerRestore() {
@@ -112,7 +139,7 @@ final class AppModel {
             + "(DNS, or Xray still running). Restore them now? You will be asked for your password."
         a.addButton(withTitle: "Restore")
         a.addButton(withTitle: "Later")
-        if a.runModal() == .alertFirstButtonReturn { session.restore() }
+        if a.runModal() == .alertFirstButtonReturn { restore() }
     }
 
     func selectProfile(_ id: UUID) {
@@ -171,7 +198,7 @@ final class AppModel {
     // MARK: Xray versions (D23)
 
     func selectXray(_ path: String) {
-        library.settings.xrayBinary = path == Settings.v2rayNXray ? nil : path
+        library.settings.xrayBinary = path
         saveSelection()
     }
 
@@ -206,29 +233,56 @@ final class AppModel {
     private func install(_ tag: String) {
         updating = true
         Task {
-            defer { updating = false; tick += 1 }
+            defer { updating = false }
             do {
-                library.settings.xrayBinary = try await Assets.installXray(tag)
-                save()
+                let binary = try await Assets.downloadXray(tag)
+                defer { try? FileManager.default.removeItem(at: Assets.staging) }
+                guard try installXray(tag, from: binary) else { return }
                 alert("Xray \(tag) installed", "It is used from the next Connect. The previous version stays installed "
                       + "and can be chosen again in Xray Version.")
             } catch {
-                alert("Download failed", error.localizedDescription)
+                alert("Could not install Xray \(tag)", error.localizedDescription)
             }
         }
+    }
+
+    /// v2rayN's xray, copied into the root-owned store: the session never runs it where it is.
+    func copyV2rayNXray() {
+        do {
+            guard try installXray(Assets.v2rayNTag, from: URL(fileURLWithPath: Settings.v2rayNXray)) else { return }
+            alert("Xray from v2rayN copied", "It is used from the next Connect. Copy it again after v2rayN updates it.")
+        } catch {
+            alert("Could not copy Xray from v2rayN", error.localizedDescription)
+        }
+    }
+
+    /// Root copies the binary into its store and checks the copy against the hash taken here, so
+    /// the session only ever runs a root-owned xray (D38). One administrator prompt; false if cancelled.
+    private func installXray(_ tag: String, from binary: URL) throws -> Bool {
+        let hash = try Assets.sha256(binary)
+        do {
+            try session.runPrivileged(["--xray", tag, binary.path, hash], detached: false, script: "xraybar-install",
+                                      prompt: "XrayBar wants to install Xray \(Self.xrayName(tag)).")
+        } catch is CancellationError {
+            return false
+        }
+        try? FileManager.default.removeItem(at: Assets.dir.appendingPathComponent("xray"))   // user-owned, before D38
+        library.settings.xrayBinary = Assets.xrayPath(tag)
+        save()
+        refresh()
+        return true
     }
 
     /// After connecting with an xray that has not carried traffic yet: one request through the
     /// tunnel. Success marks it as working; failure offers the way back (D23).
     private func trialIfNeeded() {
-        let s = library.settings
-        guard session.state == .connected, s.xrayPath != s.goodXray else { return }
-        let path = s.xrayPath
+        guard session.state == .connected, let path = xrayInUse, path != library.settings.goodXray else { return }
         Task {
             if await Assets.probe() {
                 library.settings.goodXray = path
                 save()
-            } else if let good = library.settings.goodXray, session.state == .connected {
+            } else if let good = library.settings.goodXray, xrayVersions.contains(where: { $0.path == good }),
+                      session.state == .connected {
                 let a = Self.newAlert()
                 a.messageText = "No traffic passes through the tunnel"
                 a.informativeText = "Connected with an Xray version that has not been used before, but a test "
@@ -237,9 +291,9 @@ final class AppModel {
                 a.addButton(withTitle: "Keep This Version")
                 NSApp.activate()
                 guard a.runModal() == .alertFirstButtonReturn else { return }
-                library.settings.xrayBinary = good == Settings.v2rayNXray ? nil : good
+                library.settings.xrayBinary = good
                 save()
-                session.reconnect(library)
+                session.reconnect(connectable)
             }
         }
     }
@@ -275,10 +329,8 @@ final class AppModel {
     }
 
     /// A standard login item (System Settings › General › Login Items), not a launch agent.
-    var opensAtLogin: Bool { _ = tick; return SMAppService.mainApp.status == .enabled }
-
     func toggleOpenAtLogin() {
-        defer { tick += 1 }
+        defer { refresh() }
         do {
             if SMAppService.mainApp.status == .enabled {
                 try SMAppService.mainApp.unregister()
@@ -307,7 +359,7 @@ final class AppModel {
         guard a.runModal() == .alertFirstButtonReturn else { return }
         do {
             try session.runPrivileged([Helper.bundledHelper.path, script.path], detached: false, script: "xraybar-install")
-            tick += 1
+            refresh()
             alert("Helper installed", "Connect now asks for Touch ID or your password.")
         } catch is CancellationError {
         } catch {
@@ -321,7 +373,7 @@ final class AppModel {
         }
         do {
             try session.runPrivileged(["--uninstall"], detached: false, script: "xraybar-install")
-            tick += 1
+            refresh()
             alert("Helper removed", "Connect asks for your administrator password again.")
         } catch is CancellationError {
         } catch {

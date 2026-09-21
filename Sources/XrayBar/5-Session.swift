@@ -2,6 +2,7 @@
 //
 // Connect: write config -> validate it with xray -> run xraybar-session.sh as root through
 // the standard administrator prompt. From then on the root script owns xray, routes and DNS.
+// Validation and the wait for Touch ID run off the main thread, so the menu stays responsive.
 // Disconnect: create the stop file; the script stops xray and restores DNS by itself.
 // The app never signals a process it did not start and never looks processes up by name (D5).
 
@@ -28,39 +29,49 @@ final class Session {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             MainActor.assumeIsolated { self.poll() }
         }
+        timer?.tolerance = 0.5   // lets macOS batch the wakeups
     }
 
     // MARK: Connect
 
+    /// `library.settings.xrayBinary` is the resolved xray from the root-owned store (AppModel).
     func connect(_ library: Library) {
         guard let profile = library.profile else { return fail("Add a profile first.") }
+        guard let xray = library.settings.xrayBinary else {
+            return fail("No Xray installed yet. Choose Xray › Download \(Assets.testedXray), or Copy Xray from v2rayN.")
+        }
         if let other = Self.otherTunnel() {
             return fail("Another VPN or TUN (\(other)) already routes all traffic, for example v2rayN in TUN mode. "
                         + "Turn it off, then connect again.")
         }
-        do {
-            let config = XrayConfig.make(profile: profile, routing: library.routing, settings: library.settings)
-            try Store.write(XrayConfig.data(config), to: Store.configFile)
-            try validate(XrayConfig.validationCopy(config), settings: library.settings)
-            try? FileManager.default.removeItem(at: Store.stopFile)
-            let s = library.settings
-            let args = [s.xrayPath, s.assetsDir, Store.configFile.path, Store.stopFile.path,
-                        String(ProcessInfo.processInfo.processIdentifier)] + s.systemDNS
-            if Helper.installed { try Helper.request(["action": "connect", "args": args], authorize: true) }
-            else { try runPrivileged(args) }
-            connectStarted = Date()
-            set(.connecting)
-        } catch is CancellationError {
-            set(.disconnected)
-        } catch {
-            fail(error.localizedDescription)
+        let s = library.settings
+        let config = XrayConfig.make(profile: profile, routing: library.routing, settings: s)
+        connectStarted = .distantFuture   // no start timeout while validating or waiting for Touch ID
+        set(.connecting)
+        Task {
+            do {
+                try Store.write(XrayConfig.data(config), to: Store.configFile)
+                let test = try XrayConfig.data(XrayConfig.validationCopy(config))
+                try await Task.detached { try Self.validate(test, xray: xray, assets: s.assetsDir) }.value
+                guard state == .connecting else { return }   // Disconnect chosen meanwhile
+                try? FileManager.default.removeItem(at: Store.stopFile)
+                let args = [xray, s.assetsDir, Store.configFile.path, Store.stopFile.path,
+                            String(ProcessInfo.processInfo.processIdentifier)] + s.systemDNS
+                if Helper.installed { try await Task.detached { try Helper.connect(args) }.value }
+                else { try runPrivileged(args) }
+                connectStarted = Date()
+            } catch is CancellationError {
+                set(.disconnected)
+            } catch {
+                fail(error.localizedDescription)
+            }
         }
     }
 
     /// Xray new enough for native TUN routing, and `xray run -test` on the config (with TUN
-    /// swapped out: creating a utun needs root).
-    private func validate(_ config: XrayConfig.JSON, settings: Settings) throws {
-        let line = try Assets.versionLine(ofXray: settings.xrayPath)
+    /// swapped out: creating a utun needs root). Blocks; runs off the main thread.
+    nonisolated private static func validate(_ config: Data, xray path: String, assets: String) throws {
+        let line = try Assets.versionLine(ofXray: path)
         guard Assets.version(line).lexicographicallyPrecedes(Assets.minimumXray) == false else {
             throw NSError(domain: "XrayBar", code: 4, userInfo: [NSLocalizedDescriptionKey:
                 "\(line.split(separator: " ").prefix(2).joined(separator: " ")) is too old for native TUN on macOS "
@@ -69,13 +80,13 @@ final class Session {
         }
 
         let file = Store.dir.appendingPathComponent("config.test.json")
-        try Store.write(XrayConfig.data(config), to: file)
+        try Store.write(config, to: file)
         defer { try? FileManager.default.removeItem(at: file) }
 
         let xray = Process()
-        xray.executableURL = URL(fileURLWithPath: settings.xrayPath)
+        xray.executableURL = URL(fileURLWithPath: path)
         xray.arguments = ["run", "-test", "-c", file.path]
-        xray.environment = ["XRAY_LOCATION_ASSET": settings.assetsDir]
+        xray.environment = ["XRAY_LOCATION_ASSET": assets]
         let output = Pipe()
         xray.standardOutput = output
         xray.standardError = output
@@ -90,13 +101,15 @@ final class Session {
 
     /// The only path to root. Every argument is single-quoted for the shell; the whole
     /// command is then escaped into an AppleScript string. A session runs detached.
-    func runPrivileged(_ arguments: [String], detached: Bool = true, script name: String = "xraybar-session") throws {
+    func runPrivileged(_ arguments: [String], detached: Bool = true, script name: String = "xraybar-session",
+                       prompt: String? = nil) throws {
         guard let script = Bundle.module.url(forResource: name, withExtension: "sh") else {
             throw NSError(domain: "XrayBar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Session script missing"])
         }
         let command = "/bin/bash " + ([script.path] + arguments).map(Self.shellQuoted).joined(separator: " ")
             + (detached ? " >/dev/null 2>&1 &" : "")
         let source = "do shell script \"\(Self.appleScriptEscaped(command))\" with administrator privileges"
+            + (prompt.map { " with prompt \"\(Self.appleScriptEscaped($0))\"" } ?? "")
 
         var error: NSDictionary?
         NSAppleScript(source: source)?.executeAndReturnError(&error)
@@ -240,6 +253,9 @@ enum Helper {
         (try? Data(contentsOf: URL(fileURLWithPath: path))).map { SHA256.hash(data: $0).description }
     }
 
+    /// Starts a session; the helper asks for Touch ID or the password first. Blocks until then.
+    static func connect(_ args: [String]) throws { try request(["action": "connect", "args": args], authorize: true) }
+
     /// Sends one request; with `authorize`, includes an (empty) authorization for the helper to
     /// check with the system dialog. Blocks until the helper answers.
     static func request(_ body: [String: Any], authorize: Bool) throws {
@@ -260,7 +276,7 @@ enum Helper {
         address.sun_family = sa_family_t(AF_UNIX)
         withUnsafeMutableBytes(of: &address.sun_path) { socket.utf8CString.withUnsafeBytes($0.copyMemory) }
         let connected = withUnsafePointer(to: &address) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
         }
         guard connected == 0 else { throw failure("The helper is not running. Reinstall it: Diagnostics › Update Helper.") }
         let data = try JSONSerialization.data(withJSONObject: body)

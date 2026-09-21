@@ -5,10 +5,15 @@
 #   /Library/LaunchDaemons/io.github.heaprip.xraybar.helper.plist
 #   the authorization right io.github.heaprip.xraybar.connect (security authorizationdb)
 #   the loaded launchd job io.github.heaprip.xraybar.helper
-# --uninstall removes the same four.
+# --uninstall removes the same four (Xray versions stay: connecting without the helper uses them).
+#
+# --xray installs one Xray version where the session accepts it (D38):
+#   /Library/Application Support/XrayBar/xray/<tag>/xray   root-owned, checked against <sha256>
+# so a binary in the user's folders is never run as root. Nothing else is touched.
 #
 # Usage: xraybar-install.sh <XrayBarHelper> <xraybar-session.sh>
 #        xraybar-install.sh --uninstall
+#        xraybar-install.sh --xray <tag> <xray binary> <sha256>
 
 # One { } block: parsed completely before running (see xraybar-session.sh).
 {
@@ -21,6 +26,22 @@ LABEL=io.github.heaprip.xraybar.helper
 PLIST=/Library/LaunchDaemons/$LABEL.plist
 RIGHT=io.github.heaprip.xraybar.connect
 
+if [[ ${1:-} == --xray ]]; then
+    [[ $# -eq 4 && $2 =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ && -f $3 && $4 =~ ^[0-9a-f]{64}$ ]] \
+        || { echo "usage: $0 --xray <tag> <xray binary> <sha256>" >&2; exit 2; }
+    install -d -o root -g wheel -m 755 "$DIR" "$DIR/xray" "$DIR/xray/$2"
+    # Copy first, then check the copy: the source is in the user's folders and could change.
+    new=$(mktemp "$DIR/xray/$2/.new.XXXXXX")
+    trap 'rm -f "$new"' EXIT
+    cp "$3" "$new"
+    [[ $(shasum -a 256 "$new" | cut -d ' ' -f 1) == "$4" ]] || { echo "checksum mismatch: $3" >&2; exit 1; }
+    chown root:wheel "$new"
+    chmod 755 "$new"
+    mv -f "$new" "$DIR/xray/$2/xray"
+    echo "Xray $2 installed"
+    exit 0
+fi
+
 launchctl bootout "system/$LABEL" 2>/dev/null || true
 # Builds before the bundle ID was final (D36) used io.github.xraybar.*: remove those too.
 launchctl bootout system/io.github.xraybar.helper 2>/dev/null || true
@@ -28,8 +49,7 @@ rm -f /Library/LaunchDaemons/io.github.xraybar.helper.plist
 security authorizationdb remove io.github.xraybar.connect >/dev/null 2>&1 || true
 
 if [[ ${1:-} == --uninstall ]]; then
-    rm -f "$PLIST"
-    rm -rf "$DIR"
+    rm -f "$PLIST" "$DIR/XrayBarHelper" "$DIR/xraybar-session.sh"
     security authorizationdb remove "$RIGHT" >/dev/null 2>&1 || true
     echo "XrayBar helper removed"
     exit 0

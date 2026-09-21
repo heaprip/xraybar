@@ -421,3 +421,48 @@ test was replaced with 203.0.113.7 (RFC 5737 documentation range) in every commi
 
 → The author removed docs/ROADMAP.md: the history and DECISIONS already tell what was done, and a
 roadmap with checkmark emoji added noise. What is not done yet is one line in the README status.
+
+## D38. Root runs only a root-owned xray; root writes the log section (2026-09-21)
+
+An outside review found two holes in the root model. (1) The session ran the xray path it was
+given, and every candidate lived in the user's folders (`core/xray/<tag>/xray`, v2rayN's
+`bin/xray`). Malware running as the user could replace that file and have it started as root
+at the next Connect, which with Connect at Launch and Touch ID is a routine, reflexive
+approval; the root-owned helper did not help. (2) The session rejected log paths with a grep
+over the config, which `"access"` (valid JSON for `"access"`) passed: root could still be
+made to write a file.
+
+→ Xray versions live in `/Library/Application Support/XrayBar/xray/<tag>/xray`, root:wheel 755.
+`xraybar-install.sh --xray <tag> <binary> <sha256>` puts one there: root copies the binary
+first, then checks the copy against the SHA-256 the app took, so a file changed in between is
+refused. This runs through the administrator prompt (password, with its own prompt text),
+also when the helper is installed: installing a binary is a distinct consent from the daily
+Touch ID for Connect. Downloads are staged in `~/…/XrayBar/download` and removed after.
+→ The session script accepts only `<store>/<tag>/xray`, a root-owned 755 regular file, and
+refuses anything else. The helper is unchanged: it passes arguments to the script, which now
+checks them. An old installed script still accepts the new paths; *Update Helper…* appears
+because the bundled script differs.
+→ v2rayN's xray is no longer run where it is: *Copy Xray from v2rayN…* installs a copy under
+the tag `v2rayN`. With nothing installed, Connect explains how to get Xray; the chosen version
+falls back to the newest installed one. Older downloads in `core/xray` (user-owned) are ignored
+and deleted after the first root install; older `xrayBinary`/`goodXray` paths simply no longer match.
+→ The session replaces the config's `log` section with `plutil -replace log -json …`, keeping
+only a validated `loglevel` and `access` "none" or "" (stdout). plutil parses and re-serializes
+the whole file, so escapes and duplicate keys are resolved before xray sees it; invalid JSON
+stops the session. A unit test checks that the rest of the config comes through unchanged.
+→ `--uninstall` of the helper keeps the xray store (connecting without the helper needs it).
+→ Still from user space, documented in SECURITY.md: the config's servers and routes, and the
+`.dat` files. Root-script budget 220 → 250 lines.
+
+## D39. Connect off the main thread; the menu reads cached state (2026-09-21)
+
+The same review: Connect ran `xray run -test` (seconds, it loads geosite.dat) and waited for
+the helper's Touch ID dialog on the main thread, so the menu bar app hung meanwhile; the menu
+body hashed the helper files and listed directories on every redraw, with a `tick` counter
+to make SwiftUI notice.
+→ Connect shows *Connecting…* at once; validation and the helper request run in detached
+tasks. A Disconnect chosen meanwhile wins (the start is skipped). The 15 s start timeout
+counts from the privileged start, not from the click.
+→ `AppModel` keeps what the menu shows from disk (installed versions, helper state, restore
+needed, login item) and refreshes it after each state change or action; `tick` is gone.
+→ The 1 s status timer has 0.5 s tolerance, so macOS can coalesce its wakeups.

@@ -10,6 +10,9 @@
 # saved DNS, which must survive a power loss) and the DNS setting of the active network
 # service. The stop file is only tested for existence (the app creates and removes it).
 #
+# <xray> must be a root-owned version from xraybar-install.sh --xray; the config's log section
+# is replaced by root. Everything else in the config is the user's choice (their servers).
+#
 # Usage: xraybar-session.sh <xray> <assets-dir> <config> <stop-file> <app-pid> <dns-server>...
 #        xraybar-session.sh --restore     clean up after a session that died (e.g. power loss)
 
@@ -25,6 +28,7 @@ LOG=$RUN/xray.log
 PIDFILE=$RUN/xray.pid          # xray started by the current session
 SESSION_PIDFILE=$RUN/session.pid
 STATE=/var/db/xraybar
+XRAY_STORE="/Library/Application Support/XrayBar/xray"   # root-owned xray versions
 DNS_SAVED=$STATE/dns.saved     # "service<TAB>previous servers" while DNS is overridden
 
 install -d -o root -g wheel -m 755 "$RUN" "$STATE"
@@ -102,7 +106,13 @@ clean_stale
 echo $$ >"$SESSION_PIDFILE"
 
 # Validate inputs: fixed shapes only, nothing is ever evaluated.
-[[ -x $XRAY && -f $XRAY ]] || fail "xray binary not found: $XRAY"
+# Root runs only an xray that root installed (xraybar-install.sh --xray): a user-writable
+# binary could be swapped by anything running as the user, then started here as root (D38).
+tag=${XRAY#"$XRAY_STORE"/}; tag=${tag%/xray}
+[[ $tag =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ && $XRAY == "$XRAY_STORE/$tag/xray" ]] \
+    || fail "xray must be a version installed by XrayBar (in $XRAY_STORE): $XRAY"
+[[ -f $XRAY && ! -L $XRAY && $(stat -f %Su:%Lp "$XRAY") == root:755 && $(stat -f %Su "$XRAY_STORE") == root ]] \
+    || fail "xray is not root-owned: $XRAY"
 [[ -d $ASSETS ]]           || fail "assets directory not found: $ASSETS"
 [[ -f $CONFIG ]]           || fail "config not found: $CONFIG"
 [[ $APP_PID =~ ^[0-9]+$ ]] || fail "bad app pid"
@@ -110,9 +120,15 @@ for d in "${DNS[@]}"; do [[ $d =~ ^[0-9A-Fa-f:.]+$ ]] || fail "bad DNS server: $
 
 # Work on a root-owned copy from here on, so the file cannot change after it is checked.
 install -o root -g wheel -m 600 "$CONFIG" "$RUN/config.json"
-# Root must not be steered into writing files: log paths may only be empty or "none".
-grep -Eo '"(access|error)"[[:space:]]*:[[:space:]]*"[^"]+"' "$RUN/config.json" | grep -qv '"none"$' \
-    && fail "config sets log files"
+# Root must not be steered into writing files, so root writes the log section itself: stdout
+# only (captured above), same level. plutil parses and re-serializes the whole file, so no
+# escape (\u0061ccess) or duplicate key can hide a log path, and bad JSON stops here (D38).
+level=$(plutil -extract log.loglevel raw -o - "$RUN/config.json" 2>/dev/null) || level=error
+[[ $level =~ ^(debug|info|warning|error|none)$ ]] || level=error
+access=$(plutil -extract log.access raw -o - "$RUN/config.json" 2>/dev/null) || access=
+[[ $access == none ]] || access=
+plutil -replace log -json "{\"loglevel\":\"$level\",\"access\":\"$access\"}" "$RUN/config.json" >/dev/null \
+    || fail "config is not valid JSON"
 
 XPID=
 cleanup() {

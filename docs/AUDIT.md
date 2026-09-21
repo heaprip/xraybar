@@ -45,7 +45,10 @@ For each item, answer yes/no with evidence:
       xray, changes DNS of the active network service, signals the PID it started,
       restores DNS. It does not install files elsewhere, persist itself, or modify
       sudoers, launchd, `/etc` or other users' data.
-- [ ] Root-run xray cannot be pointed at a config that writes files (log paths rejected).
+- [ ] Root runs only an xray from its own root-owned store (`/Library/Application Support/XrayBar/xray`),
+      put there by `xraybar-install.sh --xray` after a hash check of the copy, never a binary
+      from a user-writable path.
+- [ ] Root-run xray cannot be pointed at a config that writes files (root rewrites the log section).
 
 **Data**
 - [ ] Profiles/credentials are only written to the documented directory.

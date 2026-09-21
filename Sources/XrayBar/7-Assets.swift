@@ -5,7 +5,8 @@
 // right after connecting with an Xray version that has not proven itself yet (D23).
 // Nothing is used unless it passes its check:
 // - Xray: the version tested with XrayBar is checked against a SHA-256 pinned right here (D22);
-//   other versions against the SHA-256 in their release's .dgst file.
+//   other versions against the SHA-256 in their release's .dgst file. A download is only staged
+//   here: root copies it into its own store, the only place the session runs xray from (D38).
 // - Routing data (rebuilt daily upstream): the SHA-256 published next to each file.
 // Same-origin checksums prove a complete, unaltered download, not that upstream is benign.
 
@@ -13,8 +14,14 @@ import CryptoKit
 import Foundation
 
 enum Assets {
-    /// geoip.dat and geosite.dat here; Xray versions in xray/<version>/xray.
+    /// geoip.dat and geosite.dat here.
     static let dir = Store.dir.appendingPathComponent("core")
+    /// Installed Xray versions, <tag>/xray, root-owned (xraybar-install.sh --xray).
+    static let store = URL(fileURLWithPath: "/Library/Application Support/XrayBar/xray")
+    /// Downloads wait here, <tag>/xray, until root has copied them into the store.
+    static let staging = Store.dir.appendingPathComponent("download")
+    /// The tag of the copy of v2rayN's xray (Settings.v2rayNXray) in the store.
+    static let v2rayNTag = "v2rayN"
 
     enum DataSource: String, Codable, CaseIterable, Sendable {
         case runetfreedom, loyalsoldier
@@ -53,13 +60,13 @@ enum Assets {
 
     // MARK: Xray versions
 
-    static func xrayPath(_ tag: String, in root: URL = dir) -> String {
-        root.appendingPathComponent("xray/\(tag)/xray").path
+    static func xrayPath(_ tag: String, in root: URL = store) -> String {
+        root.appendingPathComponent("\(tag)/xray").path
     }
 
     /// Installed versions, newest first.
-    static func installedXray(in root: URL = dir) -> [String] {
-        let tags = (try? FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("xray").path)) ?? []
+    static func installedXray(in root: URL = store) -> [String] {
+        let tags = (try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? []
         return tags.filter { FileManager.default.isExecutableFile(atPath: xrayPath($0, in: root)) }
             .sorted { version($1).lexicographicallyPrecedes(version($0)) }
     }
@@ -76,11 +83,11 @@ enum Assets {
             .filter { !version($0).lexicographicallyPrecedes(minimumXray) }
     }
 
-    /// Downloads and verifies one version into xray/<tag>/, returns the binary's path.
-    static func installXray(_ tag: String, in root: URL = dir) async throws -> String {
+    /// Downloads and verifies one version into <root>/<tag>/xray, returns the binary.
+    static func downloadXray(_ tag: String, in root: URL = staging) async throws -> URL {
         let fm = FileManager.default
-        let target = root.appendingPathComponent("xray/\(tag)")
-        let staging = root.appendingPathComponent("xray/\(tag).new")
+        let target = root.appendingPathComponent(tag)
+        let staging = root.appendingPathComponent("\(tag).new")
         try? fm.removeItem(at: staging)
         try fm.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: staging) }
@@ -97,7 +104,7 @@ enum Assets {
         try? fm.removeItem(at: zip)
         try? fm.removeItem(at: target)
         try fm.moveItem(at: staging, to: target)
-        return xrayPath(tag, in: root)
+        return URL(fileURLWithPath: xrayPath(tag, in: root))
     }
 
     // MARK: Routing data
@@ -184,11 +191,14 @@ enum Assets {
     }
 
     static func verify(_ file: URL, expected: String) throws {
-        let data = try Data(contentsOf: file, options: .mappedIfSafe)
-        let actual = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        guard expected.count == 64, actual == expected.lowercased() else {
+        guard expected.count == 64, try sha256(file) == expected.lowercased() else {
             throw failure("\(file.lastPathComponent): checksum mismatch, nothing was installed")
         }
+    }
+
+    static func sha256(_ file: URL) throws -> String {
+        let data = try Data(contentsOf: file, options: .mappedIfSafe)
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     @discardableResult
