@@ -20,9 +20,10 @@ Use this to review XrayBar yourself, or give it to an AI model as instructions
    every listed occurrence.
 2. Confirm the dependency surface: `Package.swift` declares no dependencies; there are no
    vendored binaries, frameworks, `.dylib`, `.a` or `.o` files in the repository
-   (`git ls-files | grep -vE '\.(swift|md|sh|json|plist)$'`).
-3. Read every file in `Sources/XrayBar/` in numeric order, and
-   `Sources/XrayBar/Resources/xraybar-session.sh`.
+   (`audit.sh` lists every tracked file that is not source, docs, config, translations or a
+   docs image).
+3. Read every file in `Sources/XrayBar/` in numeric order, the root scripts in
+   `Sources/XrayBar/Resources/` and the helper, `Sources/XrayBarHelper/main.swift`.
 
 For each item, answer yes/no with evidence:
 
@@ -41,7 +42,8 @@ For each item, answer yes/no with evidence:
       session script as root (from the root-owned copy when the helper runs the session), only
       watches processes, the stop file's folder and the network, prints events and changes
       nothing. The install script touches only the four
-      things it lists, and `--uninstall` removes them.
+      things it lists, `--uninstall` removes them, and `--xray` only copies one checked
+      binary into the xray store.
 - [ ] Arguments passed to the script are quoted/validated; no user-controlled string is
       interpolated into a shell command unescaped (profile names, paths, server addresses).
 - [ ] As root, the script only: creates `/var/run/xraybar` and `/var/db/xraybar`, copies the config, starts
@@ -54,7 +56,9 @@ For each item, answer yes/no with evidence:
 - [ ] Root-run xray cannot be pointed at a config that writes files (root rewrites the log section).
 
 **Data**
-- [ ] Profiles/credentials are only written to the documented directory.
+- [ ] Profiles are only written to the documented directory; server credentials (VLESS ids) to
+      the one keychain item "XrayBar server credentials", or to `library.json` if the keychain
+      is unavailable.
 - [ ] Nothing reads browser data, Keychain items not created by the app, SSH keys,
       shell history, or other apps' data (except the documented read-only v2rayN import).
 
@@ -66,8 +70,10 @@ For each item, answer yes/no with evidence:
 - [ ] Generated Xray config matches what the UI shows (profile, rules, DNS).
 
 **Supply chain**
-- [ ] Xray and `.dat` downloads (when present) verify a checksum from the upstream release
-      before use.
+- [ ] Xray and `.dat` downloads verify a checksum from the upstream release before use.
+- [ ] Release builds: `.github/workflows/release.yml` builds from the tagged commit with
+      actions pinned by commit SHA, and attests the files; `gh attestation verify` on a
+      downloaded file names that workflow and commit.
 
 ## Output
 

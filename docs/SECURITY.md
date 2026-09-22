@@ -49,7 +49,7 @@ Protects against:
   copy of the config and writes its log section itself (plutil re-serializes the whole file,
   so escaped or duplicate keys cannot smuggle a log path in).
 
-Does not protect against (known limitations, stage 1):
+Does not protect against (known limitations):
 - **Malware already running as your user.** Without the helper it could replace the
   session script before you type your password. With the helper installed, the root logic
   (helper, script and xray) is root-owned and cannot be changed without admin rights. The
@@ -87,4 +87,6 @@ Open at Login uses a standard login item (System Settings › General › Login 
 
 ## Reporting
 
-Open an issue, or for anything sensitive contact the maintainer privately first.
+A vulnerability: report it privately with *Report a vulnerability* on the repository's
+[Security tab](https://github.com/heaprip/xraybar/security/advisories/new), not in an issue.
+Anything else: open an issue.
