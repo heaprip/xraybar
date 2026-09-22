@@ -22,24 +22,13 @@ with nothing else in between.
 > IPv6 network, the DNS override across a switch between network services (Wi-Fi to Ethernet).
 > Not done: transports other than raw.
 
-## How this was built — read this first
+## How it was built
 
-XrayBar was written almost entirely by an AI coding agent (Claude Code), directed by the
-author in conversation: what is often called *vibe coding*. The author is **not a Swift or
-macOS developer** and does not know Apple's development practices (Swift, SwiftUI/AppKit,
-the SDKs, signing, launchd) well enough to judge the code as an expert would.
-
-What the author did: decided what the app should and should not do, insisted on a small,
-auditable design, and tested every step on a real Mac (macOS 26) with real servers. What was
-done to make up for the missing expertise: every decision and its evidence is written down
-([docs/DECISIONS.md](docs/DECISIONS.md)), including the mistakes; the code is small and meant to
-be read in order; there are tests and a deterministic audit script ([scripts/audit.sh](scripts/audit.sh)).
-
-What it means for you: **no experienced macOS engineer has reviewed this code.** It may be
-unidiomatic, and it may be wrong in ways neither the author nor the AI noticed. Treat it as
-you would any unreviewed code that asks for your administrator password: read it or have it
-reviewed ([docs/AUDIT.md](docs/AUDIT.md)) before you trust it. Reviews and issues from people who
-know the platform are very welcome.
+XrayBar is built with an AI coding agent (Claude Code), directed and tested on a real Mac by
+the author, an experienced developer who is new to Apple's desktop platform. Every decision is
+written down in [docs/DECISIONS.md](docs/DECISIONS.md), and the code is small enough to read in
+one sitting. It has not been reviewed by a macOS specialist yet: reviews and issues are very
+welcome, and [docs/AUDIT.md](docs/AUDIT.md) is a checklist for checking it yourself.
 
 ## Why
 
