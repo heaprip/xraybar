@@ -53,7 +53,7 @@ when you disconnect. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md).
 Requirements: macOS 15 or later, Apple silicon or Intel. The interface follows the system
 language: English or Russian.
 
-1. Download `XrayBar-x.y.z.pkg` (or the `.zip`) from [Releases](https://github.com/heaprip/xraybar/releases).
+1. Download `XrayBar-x.y.z.pkg` (or the `.zip`) from the [latest release](https://github.com/heaprip/xraybar/releases/latest).
 2. Open it. XrayBar is signed ad hoc, not notarized (there is no paid Apple Developer ID), so
    macOS refuses the first time: click **Done**, then **System Settings › Privacy & Security**,
    scroll to *"XrayBar… was blocked"*, **Open Anyway**, confirm. For the `.pkg` this is needed

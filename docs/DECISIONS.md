@@ -642,8 +642,10 @@ Developer ID and none is planned (no App Store either).
 builds a universal app (`UNIVERSAL=1 make-app.sh`, Apple silicon + Intel, needs Xcode, which
 the runner has), packages `XrayBar-x.y.z.pkg` (installs into /Applications; not relocatable, so
 it never "upgrades" a copy in a build folder) and `XrayBar-x.y.z.zip`, writes `SHA256SUMS`,
-attests both files with `actions/attest-build-provenance`, and publishes a prerelease with the
-version's section of `CHANGELOG.md` as notes.
+attests both files with `actions/attest-build-provenance`, and publishes a release (Latest) with
+the version's section of `CHANGELOG.md` as notes. Not a prerelease: GitHub's sidebar and
+`/releases/latest` ignore prereleases, so 0.3.0 was invisible there (noticed by the author);
+"early" is said in the README instead.
 → Actions are pinned by commit SHA; the jobs get only the permissions they use.
 → Ad hoc, not notarized: the first open needs *Open Anyway* in System Settings (once per
 downloaded `.pkg`; what it installs is not quarantined), and the keychain item asks once after

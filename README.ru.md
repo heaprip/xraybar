@@ -53,7 +53,7 @@ SwiftUI/AppKit, SDK, подпись, launchd) настолько, чтобы о�
 Нужно: macOS 15 или новее, Apple silicon или Intel. Интерфейс следует языку системы:
 английский или русский (ниже пункты меню названы как в русском).
 
-1. Скачайте `XrayBar-x.y.z.pkg` (или `.zip`) со страницы [Releases](https://github.com/heaprip/xraybar/releases).
+1. Скачайте `XrayBar-x.y.z.pkg` (или `.zip`) из [последнего релиза](https://github.com/heaprip/xraybar/releases/latest).
 2. Откройте его. XrayBar подписан ad hoc и не нотаризован (платного Apple Developer ID нет),
    поэтому в первый раз macOS откажет: нажмите **Готово**, затем **Системные настройки ›
    Конфиденциальность и безопасность**, найдите *«XrayBar… заблокирован»*, **Всё равно
