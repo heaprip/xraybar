@@ -33,11 +33,26 @@ Read `docs/PRINCIPLES.md` first. The short version:
 
 Build: `swift build`. Test: `scripts/test.sh` (plain `swift test` hits a CLT plugin bug, see
 the script). Integration (local v2rayN + xray, read-only): `scripts/test.sh --integration`.
-In this environment `grep` may be a shell function wrapping ugrep: to check what the root
-script will do, run snippets under `/bin/bash --noprofile --norc`.
+In this environment `grep` may be a shell function wrapping ugrep and `log` a shell builtin:
+use `/usr/bin/grep` and `/usr/bin/log`, and to check what the root script will do, run
+snippets under `/bin/bash --noprofile --norc`. shellcheck runs in CI (`-S warning`).
 
 Never touch the user's v2rayN installation beyond read-only access to its database and
 binaries. Never stop processes you did not start.
+
+## Releasing
+
+1. Set `CFBundleShortVersionString` in `Support/Info.plist` and add a `## x.y.z` section to
+   `CHANGELOG.md` (it becomes the release notes; move the Unreleased items there).
+2. Commit, scan for personal data, push, and wait for CI to pass.
+3. `git tag -a vX.Y.Z -m "XrayBar X.Y.Z"` and push the tag. `release.yml` builds the universal
+   app, `.pkg`, `.zip`, `SHA256SUMS`, the provenance attestation, and publishes it as Latest.
+4. Check it as a user would: `gh release download vX.Y.Z`, `shasum -a 256 -c SHA256SUMS`,
+   `gh attestation verify XrayBar-X.Y.Z.pkg -R heaprip/xraybar`, `lipo -archs`, `vtool
+   -show-build` (minos 15.0). If the workflow fails, delete the tag, fix, tag again.
+
+CI uses the `xcode-27` image (Swift 6.4); Swift 6.3 crashes compiling the menu (D48).
+Local context that is not part of the project, if present: `CLAUDE.local.md` and `.notes/`.
 
 Do not launch the built app to smoke-test it: with *Connect at Launch* it may start a
 connection and put an authorization prompt on the user's screen. Build, run the tests, and

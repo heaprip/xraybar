@@ -10,5 +10,7 @@ DerivedData/
 /.ref/
 /poc/
 /xray-macos-menubar-architecture.md
+/.notes/
+/CLAUDE.local.md
 .vscode/
 /build/

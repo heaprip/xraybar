@@ -3,6 +3,13 @@
 Release notes, newest first. Each `## x.y.z` section becomes the GitHub release text.
 Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers below).
 
+## Unreleased
+
+- Releases are published as Latest (they did not show in GitHub's sidebar as prereleases).
+- README: a shorter "How it was built"; Russian docs name menu items as the Russian UI does;
+  AUDIT covers the install script, the helper, the keychain item and release builds;
+  vulnerabilities are reported privately on the Security tab.
+
 ## 0.3.0
 
 The first release with downloadable builds: a `.pkg` and a `.zip`, built by CI from this tag

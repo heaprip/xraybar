@@ -72,6 +72,9 @@ ad-hoc signature carries no identity: whoever can modify the bundle can also re-
 detects accidents and naive tampering, not a determined local attacker. There is no Developer
 ID and no notarization (D48): macOS asks you to allow the first open, and the keychain item
 asks once more after each update, since an ad-hoc signed update is a different app to it.
+The bundle is not built with the hardened runtime yet, so a process running as you could load
+code into XrayBar; that gives it XrayBar's authorization for the current run (Connect without
+another Touch ID), not more: root still runs only the root-owned xray and rewrites the log.
 Open at Login uses a standard login item (System Settings › General › Login Items).
 
 ## How to verify
