@@ -85,7 +85,7 @@ final class Session {
                 let args = [xray, s.assetsDir, Store.configFile.path, Store.stopFile.path,
                             String(ProcessInfo.processInfo.processIdentifier)] + s.systemDNS
                 if Helper.installed { try await Task.detached { try Helper.connect(args) }.value }
-                else { try runPrivileged(args) }
+                else { try await runPrivilegedFromTask(args) }
                 connectStarted = Date()
             } catch is CancellationError {
                 set(.disconnected)
@@ -149,6 +149,21 @@ final class Session {
         }
     }
 
+    /// `runPrivileged` for code in a Task. That code runs inside a main-queue job, and on macOS 27
+    /// the administrator prompt then hangs (a spinning cursor, no typing): it waits for something
+    /// delivered on the main queue, which the job holds. From a run-loop block, as from a menu
+    /// action, it does not (D49).
+    func runPrivilegedFromTask(_ arguments: [String], detached: Bool = true, script: String = "xraybar-session",
+                               prompt: String? = nil) async throws {
+        try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, Error>) in
+            RunLoop.main.perform(inModes: [.common]) {
+                MainActor.assumeIsolated {
+                    done.resume(with: Result { try self.runPrivileged(arguments, detached: detached, script: script, prompt: prompt) })
+                }
+            }
+        }
+    }
+
     nonisolated static func shellQuoted(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
     nonisolated static func appleScriptEscaped(_ s: String) -> String {
         s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
@@ -194,7 +209,12 @@ final class Session {
     /// The utun interface that currently carries internet traffic, if it is not ours. Two
     /// tunnels cannot both own the same routes ("failed to add system route … file exists").
     static func otherTunnel() -> String? {
-        guard runningPID() == nil else { return nil }
+        guard runningPID() == nil, let interface = routeInterface(), interface.hasPrefix("utun") else { return nil }
+        return interface
+    }
+
+    /// The interface `route get 1.1.1.1` names: a utun once Xray has installed its routes.
+    private static func routeInterface() -> String? {
         let route = Process()
         route.executableURL = URL(fileURLWithPath: "/sbin/route")
         route.arguments = ["-n", "get", "1.1.1.1"]
@@ -204,9 +224,8 @@ final class Session {
         guard (try? route.run()) != nil else { return nil }
         let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         route.waitUntilExit()
-        let interface = text.split(separator: "\n").first { $0.contains("interface:") }?
+        return text.split(separator: "\n").first { $0.contains("interface:") }?
             .split(separator: " ").last.map(String.init)
-        return interface?.hasPrefix("utun") == true ? interface : nil
     }
 
     /// A globally routable IPv6 address (2000::/3) on an interface that is up, not a tunnel.
@@ -245,7 +264,9 @@ final class Session {
     private func poll() {
         let running = Self.runningPID() != nil
         switch state {
-        case .connecting where running:
+        case .connecting where running && Self.routeInterface()?.hasPrefix("utun") == true:
+            // Routed, not merely started: until then nothing enters the tunnel, and the trial
+            // request would pass outside it and mark this Xray as working.
             // The session works on its own root-owned copy by now; don't keep credentials around.
             try? FileManager.default.removeItem(at: Store.configFile)
             set(.connected)

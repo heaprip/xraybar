@@ -5,6 +5,10 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- Fix (macOS 27): the administrator prompt after *Download Xray* hung with a spinning cursor
+  and took no password (D49).
+- Fix: the menu showed Connected, and a new Xray counted as working, before Xray had routed
+  any traffic into the tunnel (D49).
 - Releases are published as Latest (they did not show in GitHub's sidebar as prereleases).
 - README: a shorter "How it was built"; Russian docs name menu items as the Russian UI does;
   AUDIT covers the install script, the helper, the keychain item and release builds;

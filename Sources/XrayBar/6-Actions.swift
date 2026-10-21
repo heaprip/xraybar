@@ -27,7 +27,7 @@ final class AppModel {
         state = session.state
         session.onChange = { [weak self] in self?.stateChanged() }
         refresh()
-        DispatchQueue.main.async { self.launched() }
+        RunLoop.main.perform(inModes: [.common]) { MainActor.assumeIsolated { self.launched() } }   // may ask for root (D49)
     }
 
     private func refresh() {
@@ -253,7 +253,7 @@ final class AppModel {
             do {
                 let binary = try await Assets.downloadXray(tag)
                 defer { try? FileManager.default.removeItem(at: Assets.staging) }
-                guard try installXray(tag, from: binary) else { return }
+                guard try await installXray(tag, from: binary) else { return }
                 alert(String(format: L("Xray %@ installed"), tag), "It is used from the next Connect. The previous version stays installed "
                       + "and can be chosen again in Xray Version.")
             } catch {
@@ -264,20 +264,22 @@ final class AppModel {
 
     /// v2rayN's xray, copied into the root-owned store: the session never runs it where it is.
     func copyV2rayNXray() {
-        do {
-            guard try installXray(Assets.v2rayNTag, from: URL(fileURLWithPath: Settings.v2rayNXray)) else { return }
-            alert("Xray from v2rayN copied", "It is used from the next Connect. Copy it again after v2rayN updates it.")
-        } catch {
-            alert("Could not copy Xray from v2rayN", error.localizedDescription)
+        Task {
+            do {
+                guard try await installXray(Assets.v2rayNTag, from: URL(fileURLWithPath: Settings.v2rayNXray)) else { return }
+                alert("Xray from v2rayN copied", "It is used from the next Connect. Copy it again after v2rayN updates it.")
+            } catch {
+                alert("Could not copy Xray from v2rayN", error.localizedDescription)
+            }
         }
     }
 
     /// Root copies the binary into its store and checks the copy against the hash taken here, so
     /// the session only ever runs a root-owned xray (D38). One administrator prompt; false if cancelled.
-    private func installXray(_ tag: String, from binary: URL) throws -> Bool {
+    private func installXray(_ tag: String, from binary: URL) async throws -> Bool {
         let hash = try Assets.sha256(binary)
         do {
-            try session.runPrivileged(["--xray", tag, binary.path, hash], detached: false, script: "xraybar-install",
+            try await session.runPrivilegedFromTask(["--xray", tag, binary.path, hash], detached: false, script: "xraybar-install",
                                       prompt: String(format: L("XrayBar wants to install Xray %@."), Self.xrayName(tag)))
         } catch is CancellationError {
             return false

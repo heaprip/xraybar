@@ -655,3 +655,26 @@ about the code itself; reading it and `audit.sh` still do.
 → README: icon, badges, install from Releases with the Gatekeeper steps and verification, build
 from source, uninstall (every file XrayBar leaves), troubleshooting. A bug report template;
 security reports go through GitHub's private vulnerability reporting.
+
+## D49. macOS 27: ask for root from a run-loop block; Connected only once routed (2026-10-21)
+
+On macOS 27.0.1 the author installed 0.3.0 on a clean setup. *Download Xray* showed the
+administrator prompt, but it took no typing and showed a spinning cursor; authd logged the
+request cancelled after 2.5 minutes. The same prompt from menu actions (install the helper, copy
+v2rayN's Xray) worked at once. The difference: after the download, `install` ran
+`NSAppleScript … with administrator privileges` from a Task, i.e. inside a main-queue job.
+On macOS 27 the prompt evidently waits for something delivered on the main queue, which that
+job holds until the prompt returns; a menu action is a run-loop callout and leaves the queue free.
+→ `Session.runPrivilegedFromTask` runs `runPrivileged` from a `RunLoop.main.perform` block and
+resumes the Task with the result. Used by *Download Xray*, *Copy Xray from v2rayN*, and
+Connect without the helper. `launched()` (which may offer Restore or a helper update, both
+prompts) is scheduled the same way instead of `DispatchQueue.main.async`.
+→ Not verified by a test: the agent does not launch the app; the author checks it.
+
+The same session showed a second problem. With v2rayN's Xray 26.5.9 on macOS 27, the session
+started xray but `route get 1.1.1.1` never went through a utun ("installed no routes"; the cause
+on macOS 27 is still open). The app showed Connected as soon as xray's PID file appeared, so the
+trial request (D23) went out over Wi-Fi, succeeded, and marked that Xray as working.
+→ Connecting becomes Connected only when xray runs and 1.1.1.1 routes through a utun, which is
+the same test the session script waits for. A start that never routes now ends as "Xray did
+not start" with the log, and the trial only runs through the tunnel.
