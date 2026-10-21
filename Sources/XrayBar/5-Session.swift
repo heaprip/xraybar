@@ -85,7 +85,7 @@ final class Session {
                 let args = [xray, s.assetsDir, Store.configFile.path, Store.stopFile.path,
                             String(ProcessInfo.processInfo.processIdentifier)] + s.systemDNS
                 if Helper.installed { try await Task.detached { try Helper.connect(args) }.value }
-                else { try await runPrivilegedFromTask(args) }
+                else { try await runPrivileged(args) }
                 connectStarted = Date()
             } catch is CancellationError {
                 set(.disconnected)
@@ -128,8 +128,11 @@ final class Session {
 
     /// The only path to root. Every argument is single-quoted for the shell; the whole
     /// command is then escaped into an AppleScript string. A session runs detached.
+    /// The prompt runs in a child process, this app's own binary (`--admin`, App.swift), so the
+    /// main thread never waits for it: on macOS 27 the menu cannot close while it waits, and the
+    /// open menu keeps the keyboard, so the password field takes no typing (D49).
     func runPrivileged(_ arguments: [String], detached: Bool = true, script name: String = "xraybar-session",
-                       prompt: String? = nil) throws {
+                       prompt: String? = nil) async throws {
         guard let script = Bundle.module.url(forResource: name, withExtension: "sh") else {
             throw NSError(domain: "XrayBar", code: 2, userInfo: [NSLocalizedDescriptionKey: "Session script missing"])
         }
@@ -137,31 +140,32 @@ final class Session {
             + (detached ? " >/dev/null 2>&1 &" : "")
         let source = "do shell script \"\(Self.appleScriptEscaped(command))\" with administrator privileges"
             + (prompt.map { " with prompt \"\(Self.appleScriptEscaped($0))\"" } ?? "")
-
-        var error: NSDictionary?
-        NSAppleScript(source: source)?.executeAndReturnError(&error)
-        if let error {
-            if error[NSAppleScript.errorNumber] as? Int == -128 {   // user pressed Cancel
-                throw CancellationError()
+        try await Task.detached {
+            let child = Process()
+            child.executableURL = Bundle.main.executableURL
+            child.arguments = ["--admin", source]
+            let message = Pipe()
+            child.standardError = message
+            try child.run()
+            let text = String(decoding: message.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            child.waitUntilExit()
+            if child.terminationStatus == 1 { throw CancellationError() }
+            guard child.terminationStatus == 0 else {
+                throw NSError(domain: "XrayBar", code: 3, userInfo: [NSLocalizedDescriptionKey:
+                    text.isEmpty ? "Administrator prompt failed" : text])
             }
-            throw NSError(domain: "XrayBar", code: 3, userInfo: [NSLocalizedDescriptionKey:
-                error[NSAppleScript.errorMessage] as? String ?? "Administrator prompt failed"])
-        }
+        }.value
     }
 
-    /// `runPrivileged` for code in a Task. That code runs inside a main-queue job, and on macOS 27
-    /// the administrator prompt then hangs (a spinning cursor, no typing): it waits for something
-    /// delivered on the main queue, which the job holds. From a run-loop block, as from a menu
-    /// action, it does not (D49).
-    func runPrivilegedFromTask(_ arguments: [String], detached: Bool = true, script: String = "xraybar-session",
-                               prompt: String? = nil) async throws {
-        try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, Error>) in
-            RunLoop.main.perform(inModes: [.common]) {
-                MainActor.assumeIsolated {
-                    done.resume(with: Result { try self.runPrivileged(arguments, detached: detached, script: script, prompt: prompt) })
-                }
-            }
-        }
+    /// In the `--admin` child: runs the script. Exit status 0, 1 if the user pressed Cancel,
+    /// 2 with the error on stderr.
+    nonisolated static func adminChild(_ source: String) -> Int32 {
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        guard let error else { return 0 }
+        if error[NSAppleScript.errorNumber] as? Int == -128 { return 1 }
+        FileHandle.standardError.write(Data((error[NSAppleScript.errorMessage] as? String ?? "Administrator prompt failed").utf8))
+        return 2
     }
 
     nonisolated static func shellQuoted(_ s: String) -> String { "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'" }
@@ -179,10 +183,10 @@ final class Session {
     }
 
     /// Stops a leftover xray and restores DNS (one administrator prompt).
-    func restore() {
+    func restore() async {
         do {
             if Helper.installed { try Helper.request(["action": "restore"], authorize: false) }
-            else { try runPrivileged(["--restore"], detached: false) }
+            else { try await runPrivileged(["--restore"], detached: false) }
             set(.disconnected)
         } catch is CancellationError {
         } catch {
@@ -346,16 +350,20 @@ enum Helper {
             body["auth"] = withUnsafeBytes(of: &external) { Data($0) }.base64EncodedString()
         }
 
-        let fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
-        guard fd >= 0 else { throw failure("socket failed") }
-        defer { close(fd) }
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
         withUnsafeMutableBytes(of: &address.sun_path) { socket.utf8CString.withUnsafeBytes($0.copyMemory) }
-        let connected = withUnsafePointer(to: &address) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+        // Right after an install or update launchd may not listen yet: a few tries, 0.2 s apart.
+        var fd: Int32 = -1
+        for _ in 1...10 where fd < 0 {
+            fd = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+            let connected = withUnsafePointer(to: &address) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+            }
+            if connected != 0 { close(fd); fd = -1; usleep(200_000) }
         }
-        guard connected == 0 else { throw failure("The helper is not responding. Reinstall it: Diagnostics › Uninstall Helper, then Use Touch ID to Connect.") }
+        defer { if fd >= 0 { close(fd) } }
+        guard fd >= 0 else { throw failure("The helper is not responding. Reinstall it: Diagnostics › Uninstall Helper, then Use Touch ID to Connect.") }
         let data = try JSONSerialization.data(withJSONObject: body)
         _ = data.withUnsafeBytes { write(fd, $0.baseAddress, $0.count) }
         shutdown(fd, SHUT_WR)

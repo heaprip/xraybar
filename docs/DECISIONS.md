@@ -656,25 +656,30 @@ about the code itself; reading it and `audit.sh` still do.
 from source, uninstall (every file XrayBar leaves), troubleshooting. A bug report template;
 security reports go through GitHub's private vulnerability reporting.
 
-## D49. macOS 27: ask for root from a run-loop block; Connected only once routed (2026-10-21)
+## D49. macOS 27: the admin prompt in a child process; Connected only once routed (2026-10-21)
 
-On macOS 27.0.1 the author installed 0.3.0 on a clean setup. *Download Xray* showed the
-administrator prompt, but it took no typing and showed a spinning cursor; authd logged the
-request cancelled after 2.5 minutes. The same prompt from menu actions (install the helper, copy
-v2rayN's Xray) worked at once. The difference: after the download, `install` ran
-`NSAppleScript … with administrator privileges` from a Task, i.e. inside a main-queue job.
-On macOS 27 the prompt evidently waits for something delivered on the main queue, which that
-job holds until the prompt returns; a menu action is a run-loop callout and leaves the queue free.
-→ `Session.runPrivilegedFromTask` runs `runPrivileged` from a `RunLoop.main.perform` block and
-resumes the Task with the result. Used by *Download Xray*, *Copy Xray from v2rayN*, and
-Connect without the helper. `launched()` (which may offer Restore or a helper update, both
-prompts) is scheduled the same way instead of `DispatchQueue.main.async`.
-→ Not verified by a test: the agent does not launch the app; the author checks it.
+On macOS 27.0.1 the author installed 0.3.0 on a clean setup. The administrator prompt
+(*Download Xray*, later also a menu action) showed but took no typing, with a spinning cursor,
+until cancelled. The screenshot showed XrayBar's menu still open behind the prompt, and the log
+showed the menu's close action reaching the app only after the prompt ended. On macOS 27 the
+menu bar menu is a scene hosted by MenuBarAgent: it closes only after a round trip to the app's
+main thread. `NSAppleScript … with administrator privileges` blocked that thread until the
+prompt returned, so the menu stayed open and kept the keyboard. Whether a prompt worked was a
+race (some did). A first fix (run the prompt from a run-loop block instead of a Task) did not help.
+→ `Session.runPrivileged` is async and never blocks the main thread: it starts the app's own
+binary as a child, `XrayBar --admin <AppleScript>`, which runs the script and exits (0, 1 for
+Cancel, 2 with the error on stderr; App.swift handles the argument before any UI). The prompt
+still names XrayBar: the request comes from XrayBar's binary. Rejected: `osascript` as the
+child (the prompt would name osascript), NSAppleScript on a background thread (not documented
+as thread-safe), the deprecated `AuthorizationExecuteWithPrivileges`.
+→ Right after the helper is installed or updated, launchd may not listen on its socket yet
+("The helper is not responding" at the first Connect, seen live): the app tries 10 times,
+0.2 s apart.
 
 The same session showed a second problem. With v2rayN's Xray 26.5.9 on macOS 27, the session
 started xray but `route get 1.1.1.1` never went through a utun ("installed no routes"; the cause
-on macOS 27 is still open). The app showed Connected as soon as xray's PID file appeared, so the
-trial request (D23) went out over Wi-Fi, succeeded, and marked that Xray as working.
+on macOS 27 is still open, v26.10.17 routes). The app showed Connected as soon as xray's PID file
+appeared, so the trial request (D23) went out over Wi-Fi, succeeded, and marked that Xray as working.
 → Connecting becomes Connected only when xray runs and 1.1.1.1 routes through a utun, which is
 the same test the session script waits for. A start that never routes now ends as "Xray did
 not start" with the log, and the trial only runs through the tunnel.

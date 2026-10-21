@@ -27,7 +27,7 @@ final class AppModel {
         state = session.state
         session.onChange = { [weak self] in self?.stateChanged() }
         refresh()
-        RunLoop.main.perform(inModes: [.common]) { MainActor.assumeIsolated { self.launched() } }   // may ask for root (D49)
+        DispatchQueue.main.async { self.launched() }
     }
 
     private func refresh() {
@@ -126,13 +126,13 @@ final class AppModel {
 
     // MARK: Actions
 
-    func connect() { if helperCurrent() { session.connect(connectable) } }
+    func connect() { Task { if await helperCurrent() { session.connect(connectable) } } }
     func disconnect() { session.disconnect() }
-    func reconnect() { if helperCurrent() { session.reconnect(connectable) } }
+    func reconnect() { Task { if await helperCurrent() { session.reconnect(connectable) } } }
 
     /// An installed helper runs its own root-owned copy of the session script, so fixes in an
     /// updated app do not reach root until the helper is updated too (D43). Connect asks first.
-    private func helperCurrent() -> Bool {
+    private func helperCurrent() async -> Bool {
         refresh()
         guard helperOutdated else { return true }
         NSApp.activate()
@@ -142,9 +142,10 @@ final class AppModel {
             + "updated, connecting would use its old copy. You will be asked for your password once."
         a.addButton(withTitle: "Update and Connect")
         a.addButton(withTitle: "Cancel")
-        return a.runModal() == .alertFirstButtonReturn && runHelperInstall()
+        guard a.runModal() == .alertFirstButtonReturn else { return false }
+        return await runHelperInstall()
     }
-    func restore() { session.restore(); refresh() }
+    func restore() { Task { await session.restore(); refresh() } }
 
     /// A previous session ended without cleaning up (power loss, crash of the root script).
     private func offerRestore() {
@@ -279,7 +280,7 @@ final class AppModel {
     private func installXray(_ tag: String, from binary: URL) async throws -> Bool {
         let hash = try Assets.sha256(binary)
         do {
-            try await session.runPrivilegedFromTask(["--xray", tag, binary.path, hash], detached: false, script: "xraybar-install",
+            try await session.runPrivileged(["--xray", tag, binary.path, hash], detached: false, script: "xraybar-install",
                                       prompt: String(format: L("XrayBar wants to install Xray %@."), Self.xrayName(tag)))
         } catch is CancellationError {
             return false
@@ -373,16 +374,16 @@ final class AppModel {
             + "system dialog, once while XrayBar runs. Diagnostics › Uninstall Helper removes it. You will be asked for your password once now."
         a.addButton(withTitle: Helper.installed ? "Update" : "Install")
         a.addButton(withTitle: "Cancel")
-        guard a.runModal() == .alertFirstButtonReturn, runHelperInstall() else { return }
-        alert("Helper installed", "Connect now asks for Touch ID or your password.")
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        Task { if await runHelperInstall() { alert("Helper installed", "Connect now asks for Touch ID or your password.") } }
     }
 
     /// One administrator prompt; false if cancelled or failed (then with an alert).
-    private func runHelperInstall() -> Bool {
+    private func runHelperInstall() async -> Bool {
         guard let script = Helper.bundledScript else { return false }
         defer { refresh() }
         do {
-            try session.runPrivileged([Helper.bundledHelper.path, script.path], detached: false, script: "xraybar-install")
+            try await session.runPrivileged([Helper.bundledHelper.path, script.path], detached: false, script: "xraybar-install")
             return true
         } catch is CancellationError {
             return false
@@ -396,13 +397,15 @@ final class AppModel {
         guard session.state != .connected, confirmRemove(L("XrayBar helper")) else {
             return session.state == .connected ? alert("Disconnect first", "The helper runs the current connection.") : ()
         }
-        do {
-            try session.runPrivileged(["--uninstall"], detached: false, script: "xraybar-install")
-            refresh()
-            alert("Helper removed", "Connect asks for your administrator password again.")
-        } catch is CancellationError {
-        } catch {
-            alert("Could not remove the helper", error.localizedDescription)
+        Task {
+            do {
+                try await session.runPrivileged(["--uninstall"], detached: false, script: "xraybar-install")
+                refresh()
+                alert("Helper removed", "Connect asks for your administrator password again.")
+            } catch is CancellationError {
+            } catch {
+                alert("Could not remove the helper", error.localizedDescription)
+            }
         }
     }
 

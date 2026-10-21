@@ -5,8 +5,9 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
-- Fix (macOS 27): the administrator prompt after *Download Xray* hung with a spinning cursor
-  and took no password (D49).
+- Fix (macOS 27): the administrator prompt took no password, with a spinning cursor, while
+  XrayBar's menu stayed open behind it (D49).
+- Fix: "The helper is not responding" at the first Connect after installing or updating it.
 - Fix: the menu showed Connected, and a new Xray counted as working, before Xray had routed
   any traffic into the tunnel (D49).
 - Releases are published as Latest (they did not show in GitHub's sidebar as prereleases).

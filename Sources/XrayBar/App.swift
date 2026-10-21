@@ -20,6 +20,10 @@ struct XrayBarApp: App {
     private let model: AppModel
 
     init() {
+        // Started by Session.runPrivileged to show the administrator prompt: no UI of its own.
+        if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--admin" {
+            exit(Session.adminChild(CommandLine.arguments[2]))
+        }
         // One instance only: a second one would run its own sessions against the same files.
         if let id = Bundle.main.bundleIdentifier,
            NSRunningApplication.runningApplications(withBundleIdentifier: id).contains(where: { $0 != .current }) {
