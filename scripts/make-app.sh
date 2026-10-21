@@ -47,4 +47,4 @@ res="$app/Contents/Resources/XrayBar_XrayBar.bundle/Contents/Resources"
 [[ -f $res/xraybar-session.sh && -x $res/../../../../MacOS/XrayBarHelper ]] || { echo "unexpected bundle layout"; exit 1; }
 
 echo "Built $app"
-echo "Install: rm -rf /Applications/XrayBar.app && cp -R $app /Applications/"
+echo "Install: rm -rf /Applications/XrayBar.app && cp -R $app /Applications/   (sudo rm if it came from the .pkg: root-owned)"
