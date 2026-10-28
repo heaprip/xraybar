@@ -21,6 +21,9 @@ final class AppModel {
     private(set) var helperOutdated = false
     private(set) var needsRestore = false
     private(set) var opensAtLogin = false
+    /// Advanced four times a second while connecting or disconnecting: the running petal.
+    private(set) var spin = 0
+    @ObservationIgnored private var spinner: Timer?
     @ObservationIgnored let session = Session()
 
     init() {
@@ -66,12 +69,12 @@ final class AppModel {
         }
     }
 
-    var iconName: String {
-        if helperOutdated { return "exclamationmark.shield" }   // root code is older than the app (D43)
-        return switch state {
-        case .connected: "shield.fill"
-        case .connecting, .disconnecting: "shield.lefthalf.filled"
-        case .disconnected, .failed: "shield"
+    /// Filled petals of the menu bar mark (8-Menu): none, one running round, or all (D53).
+    var markPetals: Set<Int> {
+        switch state {
+        case .connected: [0, 1, 2, 3]
+        case .connecting, .disconnecting: [spin % 4]
+        case .disconnected, .failed: []
         }
     }
 
@@ -119,6 +122,10 @@ final class AppModel {
     private func stateChanged() {
         state = session.state
         if state == .connecting { changedWhileConnected = false }
+        spinner?.invalidate()
+        spinner = state == .connecting || state == .disconnecting
+            ? Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in MainActor.assumeIsolated { self.spin += 1 } }
+            : nil
         refresh()
         trialIfNeeded()
         if case .failed(let message) = session.state { alert("Could not connect", message) }
@@ -409,6 +416,37 @@ final class AppModel {
         }
     }
 
+    /// Removes everything XrayBar keeps (D52): root's part with one administrator prompt (helper,
+    /// Xray versions, run files), then the data folder, the keychain item and the login item, and
+    /// quits. The app itself and v2rayN are left alone.
+    func resetAll() {
+        guard Session.runningPID() == nil, !Session.needsRestore else {
+            return alert("Disconnect first", "Disconnect, or use Restore Network Settings, then reset.")
+        }
+        NSApp.activate()
+        let a = Self.newAlert()
+        a.messageText = "Reset XrayBar?"
+        a.informativeText = "Removes your servers, routing sets and settings, the routing data, every installed Xray "
+            + "version, the helper and the saved credentials, then quits. XrayBar itself stays; v2rayN is not touched. "
+            + "You will be asked for your password."
+        a.addButton(withTitle: "Reset").hasDestructiveAction = true
+        a.addButton(withTitle: "Cancel")
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        Task {
+            do {
+                try await session.runPrivileged(["--reset"], detached: false, script: "xraybar-install")
+            } catch is CancellationError {
+                return
+            } catch {
+                return alert("Could not reset", error.localizedDescription)
+            }
+            try? await SMAppService.mainApp.unregister()
+            Keychain.delete()
+            try? FileManager.default.removeItem(at: Store.dir)
+            NSApp.terminate(nil)
+        }
+    }
+
     func toggleDetailedLog() {
         library.settings.detailedLog = !(library.settings.detailedLog ?? false)
         saveSelection()
@@ -534,7 +572,7 @@ final class AppModel {
     func showAbout() {
         let small: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
                                                     .foregroundColor: NSColor.secondaryLabelColor]
-        let credits = NSMutableAttributedString(string: L("A menu-bar client for Xray-core's native TUN.") + "\n", attributes: small)
+        let credits = NSMutableAttributedString(string: L("A menu-bar client built on Xray-core.") + "\n", attributes: small)
         credits.append(NSAttributedString(string: "github.com/heaprip/xraybar", attributes:
             small.merging([.link: URL(string: "https://github.com/heaprip/xraybar")!]) { $1 }))
         credits.append(NSAttributedString(string: "\n" + L("Xray-core is a separate program (MPL-2.0)."), attributes: small))

@@ -88,6 +88,8 @@ enum Keychain {
         }
     }
 
+    static func delete() { SecItemDelete(item as CFDictionary) }
+
     static func write(_ secrets: [String: String]) -> Bool {
         guard let data = try? JSONEncoder().encode(secrets) else { return false }
         let status = SecItemUpdate(item as CFDictionary, [kSecValueData as String: data] as CFDictionary)

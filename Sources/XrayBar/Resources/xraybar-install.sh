@@ -6,13 +6,15 @@
 #   the authorization right io.github.heaprip.xraybar.connect (security authorizationdb)
 #   the loaded launchd job io.github.heaprip.xraybar.helper
 # --uninstall removes the same four (Xray versions stay: connecting without the helper uses them).
+# --reset removes them and everything else root keeps for XrayBar (D52): the Xray versions,
+# /var/run/xraybar and /var/db/xraybar. Refused while a session runs or DNS is still overridden.
 #
 # --xray installs one Xray version where the session accepts it (D38):
 #   /Library/Application Support/XrayBar/xray/<tag>/xray   root-owned, checked against <sha256>
 # so a binary in the user's folders is never run as root. Nothing else is touched.
 #
 # Usage: xraybar-install.sh <XrayBarHelper> <xraybar-session.sh>
-#        xraybar-install.sh --uninstall
+#        xraybar-install.sh --uninstall | --reset
 #        xraybar-install.sh --xray <tag> <xray binary> <sha256>
 
 # One { } block: parsed completely before running (see xraybar-session.sh).
@@ -48,10 +50,15 @@ launchctl bootout system/io.github.xraybar.helper 2>/dev/null || true
 rm -f /Library/LaunchDaemons/io.github.xraybar.helper.plist
 security authorizationdb remove io.github.xraybar.connect >/dev/null 2>&1 || true
 
-if [[ ${1:-} == --uninstall ]]; then
+if [[ ${1:-} == --uninstall || ${1:-} == --reset ]]; then
     rm -f "$PLIST" "$DIR/XrayBarHelper" "$DIR/xraybar-session.sh"
     security authorizationdb remove "$RIGHT" >/dev/null 2>&1 || true
-    echo "XrayBar helper removed"
+    [[ $1 == --reset ]] || { echo "XrayBar helper removed"; exit 0; }
+    [[ -e /var/db/xraybar/dns.saved ]] && { echo "DNS is still overridden: restore network settings first" >&2; exit 1; }
+    pid=$(cat /var/run/xraybar/session.pid 2>/dev/null) || pid=
+    [[ $pid =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null && { echo "a session is running: disconnect first" >&2; exit 1; }
+    rm -rf "$DIR" /var/run/xraybar /var/db/xraybar
+    echo "XrayBar reset"
     exit 0
 fi
 

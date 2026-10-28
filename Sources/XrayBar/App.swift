@@ -32,10 +32,7 @@ struct XrayBarApp: App {
         NSApplication.shared.setActivationPolicy(.accessory)   // menu bar only, no Dock icon
         // Run without a bundle (swift run), alerts would show a folder icon; the .app has AppIcon.icns.
         if !Bundle.main.bundlePath.hasSuffix(".app") {
-            let symbol = NSImage.SymbolConfiguration(pointSize: 64, weight: .regular)
-                .applying(.init(hierarchicalColor: .controlAccentColor))
-            NSApplication.shared.applicationIconImage = NSImage(systemSymbolName: "shield.fill", accessibilityDescription: "XrayBar")?
-                .withSymbolConfiguration(symbol)
+            NSApplication.shared.applicationIconImage = Mark.image(filled: [0, 1, 2, 3])
         }
         model = AppModel()
     }
@@ -45,8 +42,8 @@ struct XrayBarApp: App {
         MenuBarExtra {
             AppMenu(model: model)
         } label: {
-            Image(systemName: model.iconName)
-                .accessibilityLabel(model.statusText)   // VoiceOver: "Connected — …", not "shield"
+            Image(nsImage: Mark.image(filled: model.markPetals, badge: model.helperOutdated))   // badge: D43
+                .accessibilityLabel(model.statusText)   // VoiceOver: "Connected — …"
         }
     }
 }

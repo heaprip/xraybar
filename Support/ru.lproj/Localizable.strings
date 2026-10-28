@@ -121,7 +121,7 @@
 "Copy Link" = "Скопировать ссылку";
 "No log yet" = "Лога пока нет";
 "The log appears after the first connection." = "Лог появится после первого подключения.";
-"A menu-bar client for Xray-core's native TUN." = "Клиент в строке меню для нативного TUN в Xray-core.";
+"A menu-bar client built on Xray-core." = "Клиент для строки меню на основе Xray-core.";
 "Xray-core is a separate program (MPL-2.0)." = "Xray-core — отдельная программа (MPL-2.0).";
 "Could not save" = "Не удалось сохранить";
 
@@ -140,3 +140,11 @@
 "Unsupported link: %@" = "Неподдерживаемая ссылка: %@";
 "v2rayN import failed: %@" = "Не удалось импортировать из v2rayN: %@";
 "%@: checksum mismatch, nothing was installed" = "%@: контрольная сумма не совпала, ничего не установлено";
+
+/* Reset (D52) */
+"Reset XrayBar…" = "Сбросить XrayBar…";
+"Reset XrayBar?" = "Сбросить XrayBar?";
+"Removes your servers, routing sets and settings, the routing data, every installed Xray version, the helper and the saved credentials, then quits. XrayBar itself stays; v2rayN is not touched. You will be asked for your password." = "Будут удалены ваши серверы, наборы правил и настройки, данные маршрутизации, все установленные версии Xray, помощник и сохранённые учётные данные, после чего приложение закроется. Сам XrayBar останется; v2rayN не затрагивается. Потребуется пароль.";
+"Reset" = "Сбросить";
+"Disconnect, or use Restore Network Settings, then reset." = "Отключитесь или восстановите сетевые настройки, затем повторите сброс.";
+"Could not reset" = "Не удалось выполнить сброс";

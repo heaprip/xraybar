@@ -718,3 +718,42 @@ skipped on import.
 the proxy outbound sets `sockopt.domainStrategy` and the name goes to the direct resolver, for
 VLESS too.
 → Swift budget 1700 → 1800 (parsing, generation, import, sharing).
+
+## D52. Reset XrayBar: remove everything it keeps, in one step (2026-10-29)
+
+The author asked for a way to remove all stored settings and files (Xray versions, `.dat`,
+and so on) without the manual steps of the README's Uninstall section.
+→ *Diagnostics › Reset XrayBar…*, the Option alternate of *Show Data Folder* (destructive, so not
+in plain sight), with a confirmation. Refused while connected or while DNS still needs restoring.
+→ Root's part is a mode of the install script, `--reset`: what `--uninstall` removes, plus the
+fixed paths `/Library/Application Support/XrayBar` (Xray versions), `/var/run/xraybar` and
+`/var/db/xraybar`. It checks again that no session runs and no DNS override is saved. One
+administrator prompt. Then the app removes `~/Library/Application Support/XrayBar`, its keychain
+item and its login item, and quits; the next launch is a first launch.
+→ Not removed: XrayBar.app (dragged to the Trash, as any app), the `.pkg` receipt (README), and
+anything of v2rayN's.
+
+## D53. A mark of its own, in Xray's style; the menu bar icon shows progress (2026-10-29)
+
+The shield (an SF Symbol) said "VPN" but nothing about Xray. The author wanted a black-and-white
+mark in Xray's style, with the old behaviour: hollow when not connected, moving while connecting,
+filled when connected. Project X's own four-pointed star was not copied: XrayBar is not an
+official Xray client and should not look like one.
+→ Four kite-shaped petals around an ×-shaped gap (Project X's star is split along a +). App icon:
+white on a black rounded square (`scripts/make-icon.swift`). Menu bar: a template image drawn in
+code (`Mark` in 8-Menu.swift), so macOS colours it for light and dark bars: petals outlined when
+not connected, one filled petal running clockwise four times a second while connecting or
+disconnecting, all filled when connected. The outdated-helper warning (D43) is a dot at the
+corner instead of the exclamation-mark shield.
+→ The screenshot in the README still shows the shield until it is retaken.
+
+## D54. The app's size budget is suspended (2026-10-29)
+
+The budget for the app's Swift code went from 1700 to 1800 (D51) and the next two features
+(D52, D53) needed more. The author suspended it for now, to be reconsidered later.
+→ `scripts/audit.sh` still prints the app's line count against 1900 but no longer fails on it.
+The budgets for the code that runs as root (the helper, the session and install scripts) stay
+enforced: that is the part whose size matters most for review.
+→ Positioning changed with this release: "a menu-bar client built on Xray-core" (VLESS and
+Hysteria 2), not "a client for Xray's native TUN"; the README says why the project exists and
+puts "Don't trust, verify" right after it.

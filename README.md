@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/images/icon.png" width="128" alt=""></p>
 <h1 align="center">XrayBar</h1>
-<p align="center">A small, native macOS menu-bar app for Xray-core's native TUN.</p>
+<p align="center">A small, native macOS menu-bar client built on Xray-core.</p>
 <p align="center">
   <a href="https://github.com/heaprip/xraybar/actions/workflows/ci.yml"><img src="https://github.com/heaprip/xraybar/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/heaprip/xraybar/releases"><img src="https://img.shields.io/github/v/release/heaprip/xraybar?include_prereleases&sort=semver" alt="Release"></a>
@@ -9,9 +9,9 @@
 </p>
 <p align="center"><b>English</b> · <a href="README.ru.md">Русский</a></p>
 
-A small, native macOS menu-bar app that runs [Xray-core](https://github.com/XTLS/Xray-core)
-with its **native TUN**: all traffic, routed by geosite/geoip rules, through one process,
-with nothing else in between.
+XrayBar keeps your servers and connects through [Xray-core](https://github.com/XTLS/Xray-core)
+and its **native TUN**: VLESS (REALITY, TLS) and Hysteria 2, routed by geosite/geoip rules,
+all traffic through one process with nothing else in between.
 
 <p align="center">
   <img src="docs/images/menus.png" width="931" alt="XrayBar menu, and the same menu with Option held: technical details and Remove items">
@@ -22,6 +22,42 @@ with nothing else in between.
 > IPv6 network, the DNS override across a switch between network services (Wi-Fi to Ethernet).
 > Not done: VLESS transports other than raw (ws, grpc, xhttp…); Hysteria 2's gecko obfuscation and realm.
 
+## Why
+
+The clients that exist did not fit. v2rayN works, and this project owes it a lot, but it is a
+cross-platform tool for many cores and many settings, and it does not feel like a Mac app.
+Closed-source clients, and most of those in the App Store, add accounts, dashboards and screens
+to look at, and you cannot see what they do as root.
+
+XrayBar does less on purpose. It keeps your servers, connects quickly, and otherwise stays out
+of the way: turn on *Open at Login*, touch the sensor once after you log in, and that is all,
+with nothing to click in normal use. It does not create or edit routing rules, and probably
+never will: routing sets come from v2rayN or runetfreedom's templates, and XrayBar applies
+them. A menu like Wi-Fi's, a password prompt only when root is needed, nothing left behind
+when you disconnect. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md).
+
+## Don't trust, verify
+
+XrayBar asks for root and carries all your traffic, so it should not ask you to trust its
+author either. It is built to be checked instead:
+
+- **Small and linear.** About 1,860 lines of Swift in numbered files read in order. The code
+  that runs as root is ~270 lines of shell and a ~150-line helper, held to hard size limits.
+  No third-party dependencies.
+- **Root does only what the scripts say:** [the session script](Sources/XrayBar/Resources/xraybar-session.sh)
+  (TUN, DNS, start and stop Xray), [the install script](Sources/XrayBar/Resources/xraybar-install.sh)
+  and [the helper](Sources/XrayBarHelper/main.swift). Root runs only an Xray copied into a
+  root-owned folder and checked against its SHA-256; it never signals a process it did not start.
+- **Quiet.** No telemetry or analytics. The network is used only when you ask (downloads,
+  checksum-verified) and for one check after connecting with a new Xray version.
+- **Credentials** live in your login keychain.
+- [docs/SECURITY.md](docs/SECURITY.md): what it does, the threat model, known limitations.
+  `scripts/audit.sh`: a deterministic inventory of privilege, processes, network and file
+  writes. [docs/AUDIT.md](docs/AUDIT.md): a review checklist, usable as instructions for an AI model.
+- **Release builds** come from CI with a provenance attestation (see Install), or build it yourself.
+
+Found a problem? Report it privately on the [Security tab](https://github.com/heaprip/xraybar/security).
+
 ## How it was built
 
 XrayBar is built with an AI coding agent (Claude Code), directed and tested on a real Mac by
@@ -29,13 +65,6 @@ the author, an experienced developer who is new to Apple's desktop platform. Eve
 written down in [docs/DECISIONS.md](docs/DECISIONS.md), and the code is small enough to read in
 one sitting. It has not been reviewed by a macOS specialist yet: reviews and issues are very
 welcome, and [docs/AUDIT.md](docs/AUDIT.md) is a checklist for checking it yourself.
-
-## Why
-
-macOS clients for Xray tend to be multi-core kitchen sinks, look nothing like a Mac app,
-or both. XrayBar does one thing and tries to do it the way Apple would:
-a menu like Wi-Fi's, a password prompt when it needs root, and nothing left behind
-when you disconnect. See [docs/PRINCIPLES.md](docs/PRINCIPLES.md).
 
 ## Install
 
@@ -112,7 +141,7 @@ except the local network and ads).
 | Share Server… | The selected server as a QR code |
 | Xray › | Versions side by side; a new version's first connection is checked, with a one-click switch back. Routing data source and update. *Exclude from Tunnel…* for networks that must bypass Xray |
 | Diagnostics › | Log, detailed log, data folder, uninstall the helper. XrayBar's own log: Console.app, subsystem `io.github.heaprip.xraybar` |
-| **Option** held | *Remove* a server or routing set · *Copy Server Link* · technical details under the status line |
+| **Option** held | *Remove* a server or routing set · *Copy Server Link* · technical details under the status line · *Diagnostics › Reset XrayBar…* |
 
 Only short, readable code runs as root: [the session script](Sources/XrayBar/Resources/xraybar-session.sh),
 [the install script](Sources/XrayBar/Resources/xraybar-install.sh) and
@@ -120,6 +149,10 @@ Only short, readable code runs as root: [the session script](Sources/XrayBar/Res
 observes), and its Touch ID service is optional.
 
 ## Uninstall
+
+The simplest way: disconnect, hold **Option**, choose *Diagnostics › Reset XrayBar…* (one
+password: removes servers, settings, routing data, every installed Xray, the helper and the
+keychain item, then quits), and delete XrayBar from /Applications. By hand:
 
 1. Disconnect, then *Diagnostics › Uninstall Helper…* if you installed it (removes the helper,
    its LaunchDaemon and its authorization right).
@@ -138,8 +171,8 @@ observes), and its Touch ID service is optional.
 - **No internet after a crash or power loss.** Open XrayBar: it offers *Restore Network
   Settings*. By hand: `networksetup -setdnsservers Wi-Fi empty`.
 - **"Another VPN or TUN already routes all traffic".** Turn off the other VPN, or v2rayN's TUN mode.
-- **The menu bar icon shows an exclamation mark.** Choose *Update Helper (Required)*: the app
-  was updated, the root helper not yet.
+- **The menu bar icon has a dot.** Choose *Update Helper (Required)*: the app was updated, the
+  root helper not yet.
 - **Nothing appears when you open the app.** It is already running (one instance only): look in
   the menu bar, or quit it first.
 - **Logs.** *Diagnostics › Show Xray Log*, and XrayBar's own:
@@ -147,23 +180,24 @@ observes), and its Touch ID service is optional.
   issue, include the macOS version, XrayBar's version (*About XrayBar*) and the relevant log
   lines, with server addresses removed.
 
-## Can I trust it?
-
-You shouldn't have to take anyone's word for it. The app is ~1,650 lines of Swift in a handful of
-numbered files meant to be read in order, plus ~260 lines of root scripts and a
-~150-line root helper, with zero dependencies.
-
-- [docs/SECURITY.md](docs/SECURITY.md) — what it does, threat model, known limitations.
-- `scripts/audit.sh` — deterministic inventory of privilege, processes, network, file writes.
-- [docs/AUDIT.md](docs/AUDIT.md) — review checklist, usable as instructions for an AI model.
-- Release builds come from CI with a provenance attestation (see Install); or build it yourself.
-
 ## Tests
 
 ```sh
 scripts/test.sh                 # unit tests
 scripts/test.sh --integration   # also runs configs from your local v2rayN through xray (read-only)
 ```
+
+## Feedback and contributions
+
+The author uses XrayBar every day and wants to hear how it works for you. Welcome:
+
+- what breaks or feels awkward;
+- protocols and features you need (more VLESS transports, Hysteria 2 options, …), as long as
+  XrayBar stays simple and narrow;
+- visual and usability improvements;
+- issues and pull requests. Read [docs/PRINCIPLES.md](docs/PRINCIPLES.md) and
+  [docs/DECISIONS.md](docs/DECISIONS.md) first: a change that keeps the code small and linear
+  is the easiest to accept.
 
 ## License and credits
 

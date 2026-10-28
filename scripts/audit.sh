@@ -1,10 +1,11 @@
 #!/bin/bash
 # Deterministic inventory of everything security-relevant in XrayBar. No network, no AI.
-# Compare its output with the table in docs/SECURITY.md. Exit code 1 if the size budget fails.
+# Compare its output with the table in docs/SECURITY.md. Exit code 1 if a root code budget fails.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 
-SWIFT_BUDGET=1800   # lines in Sources/XrayBar, excluding blank lines (1200 → 1400 D23 → 1500 D29 → 1600 D31 → 1700 D45 → 1800 D51)
+SWIFT_BUDGET=1900   # lines in Sources/XrayBar, excluding blank lines (1200 → 1400 D23 → 1500 D29 → 1600 D31 → 1700 D45 → 1800 D51 → 1900 D52, D53)
+                    # Suspended (D54): reported, not enforced, until the author revisits it.
 HELPER_BUDGET=180   # lines in the root helper (Sources/XrayBarHelper), excluding blank lines (150 → 180 D42)
 SHELL_BUDGET=270    # lines in the root scripts (session + install), excluding blank lines (220 → 250 D38 → 270 D42)
 
@@ -17,7 +18,7 @@ helper_lines=$(cat Sources/XrayBarHelper/*.swift | grep -cv '^[[:space:]]*$')
 shell_lines=$(cat Sources/XrayBar/Resources/*.sh | grep -cv '^[[:space:]]*$')
 echo "App Swift: $swift_lines / $SWIFT_BUDGET    root helper: $helper_lines / $HELPER_BUDGET    root scripts: $shell_lines / $SHELL_BUDGET"
 fail=0
-(( swift_lines <= SWIFT_BUDGET )) || { echo "FAIL: Swift budget exceeded"; fail=1; }
+(( swift_lines <= SWIFT_BUDGET )) || echo "NOTE: Swift budget exceeded (suspended, D54)"
 (( helper_lines <= HELPER_BUDGET )) || { echo "FAIL: helper budget exceeded"; fail=1; }
 (( shell_lines <= SHELL_BUDGET )) || { echo "FAIL: script budget exceeded"; fail=1; }
 

@@ -5,6 +5,15 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- New mark: a four-petal star, white on black for the app icon. In the menu bar it is hollow
+  when not connected, a petal runs round while connecting, filled when connected; a dot means
+  the helper needs an update (D53).
+- *Diagnostics › Reset XrayBar…* (hold Option): removes everything XrayBar keeps (servers,
+  settings, routing data, Xray versions, the helper, the keychain item) with one password, then
+  quits (D52).
+- README: why XrayBar exists, "Don't trust, verify" near the top, how to give feedback;
+  positioned as a client built on Xray-core rather than a client for its TUN.
+
 ## 0.4.0
 
 Hysteria 2 servers, and fixes for macOS 27.

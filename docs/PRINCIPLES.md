@@ -37,7 +37,8 @@ kitchen sinks or look and behave nothing like a Mac app.
 
 1. **Small enough to read in one sitting.** The whole app is a few linear Swift
    files meant to be read top to bottom, plus the short root scripts and helper.
-   A hard size budget is enforced by `scripts/audit.sh`.
+   A hard size budget for the code that runs as root is enforced by `scripts/audit.sh`; the
+   app's own budget is suspended for now (D54) and only reported.
 2. **The app stays small; libraries are welcome when they earn their place.** A
    well-known, maintained package may replace code we would otherwise write, pinned to
    an exact version so an audit covers exactly that code. Xray-core and the `.dat` files

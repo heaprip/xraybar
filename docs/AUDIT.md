@@ -42,7 +42,9 @@ For each item, answer yes/no with evidence:
       session script as root (from the root-owned copy when the helper runs the session), only
       watches processes, the stop file's folder and the network, prints events and changes
       nothing. The install script touches only the four
-      things it lists, `--uninstall` removes them, and `--xray` only copies one checked
+      things it lists, `--uninstall` removes them, `--reset` removes them plus the fixed paths
+      `/Library/Application Support/XrayBar`, `/var/run/xraybar` and `/var/db/xraybar` (and
+      refuses while a session runs or DNS is overridden), and `--xray` only copies one checked
       binary into the xray store.
 - [ ] Arguments passed to the script are quoted/validated; no user-controlled string is
       interpolated into a shell command unescaped (profile names, paths, server addresses).
