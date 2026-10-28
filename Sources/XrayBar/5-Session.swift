@@ -71,15 +71,18 @@ final class Session {
             return fail(String(format: L("Another VPN or TUN (%@) already routes all traffic, for example v2rayN in TUN mode. "
                                          + "Turn it off, then connect again."), other))
         }
-        let s = library.settings
-        let config = XrayConfig.make(profile: profile, routing: library.routing, settings: s, ipv6: Self.hasGlobalIPv6())
+        var s = library.settings
         connectStarted = .distantFuture   // no start timeout while validating or waiting for Touch ID
         set(.connecting)
         Task {
             do {
+                let server = try await Task.detached { try Self.resolved(profile) }.value
+                if CIDR.parse(server.address) != nil { s.routeExclusions = (s.routeExclusions ?? []) + [server.address] }
+                let config = XrayConfig.make(profile: server, routing: library.routing, settings: s, ipv6: Self.hasGlobalIPv6())
                 try Store.write(XrayConfig.data(config), to: Store.configFile)
                 let test = try XrayConfig.data(XrayConfig.validationCopy(config))
-                try await Task.detached { try Self.validate(test, xray: xray, assets: s.assetsDir) }.value
+                let assets = s.assetsDir
+                try await Task.detached { try Self.validate(test, xray: xray, assets: assets) }.value
                 guard state == .connecting else { return }   // Disconnect chosen meanwhile
                 try? FileManager.default.removeItem(at: Store.stopFile)
                 let args = [xray, s.assetsDir, Store.configFile.path, Store.stopFile.path,
@@ -93,6 +96,30 @@ final class Session {
                 fail(error.localizedDescription)
             }
         }
+    }
+
+    /// The server by address, outside the tunnel (D57). A name is resolved here, before the tunnel
+    /// exists, and stays the TLS name. Left to Xray, the lookup went into the tunnel on macOS 27
+    /// and came back empty; and with the address out of the tunnel's routes, Xray's own
+    /// connection to the server, TCP or QUIC, cannot loop into it either.
+    nonisolated static func resolved(_ p: Profile) throws -> Profile {
+        guard CIDR.parse(p.address) == nil, !p.address.contains(":") else { return p }
+        var hints = addrinfo()
+        hints.ai_family = AF_INET
+        hints.ai_socktype = SOCK_STREAM
+        var list: UnsafeMutablePointer<addrinfo>?
+        guard getaddrinfo(p.address, nil, &hints, &list) == 0, let first = list, let address = first.pointee.ai_addr else {
+            throw NSError(domain: "XrayBar", code: 5, userInfo: [NSLocalizedDescriptionKey:
+                String(format: L("Could not find the server %@: its name does not resolve. Check the network."), p.address)])
+        }
+        defer { freeaddrinfo(list) }
+        var ip = address.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { $0.pointee.sin_addr }
+        var text = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+        inet_ntop(AF_INET, &ip, &text, socklen_t(text.count))
+        var r = p
+        if r.sni.isEmpty { r.sni = p.address }
+        r.address = String(decoding: text.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+        return r
     }
 
     /// Xray new enough for native TUN routing, and `xray run -test` on the config (with TUN

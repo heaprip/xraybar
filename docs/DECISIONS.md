@@ -791,3 +791,24 @@ a pin); Hysteria 2 traffic passed through it on the Mac (SOCKS) and on the autho
 pop-up did not open (the menu bar menu was still showing; the author could only Cancel). It now
 offers only the newest release, and only when it is newer than every installed version: two
 buttons, no list. Older versions were rarely the point; the tested one has its own menu item.
+
+## D57. The app resolves a server's name; the server's address bypasses the tunnel (2026-10-29)
+
+The author's Hysteria 2 server is given by name. Through the TUN nothing passed: Xray's log had
+`failed to resolve ip > app/dns: returning nil for domain <server> > record not found`, then only
+DNS-over-HTTPS timeouts. The same config with a SOCKS inbound instead of the TUN worked (the
+direct resolver answered, Hysteria 2 connected), and every public resolver returned the address.
+So inside the tunnel, the DNS module's lookup of the server (D51: direct resolver, `sockopt`)
+did not get out and came back empty; most likely the query entered the tunnel again. VLESS
+servers given by address never needed it, which is why this had not shown.
+→ Supersedes D51's lookup. On Connect the app resolves a name with the system resolver (IPv4),
+before the tunnel exists, gives Xray the address and keeps the name as the TLS server name
+(`sni`, if the link had none). An unresolvable name fails Connect with a clear message.
+→ The server's IPv4 address is always left out of the tunnel's routes (`autoSystemRoutingTable`,
+as Exclude from Tunnel does). Xray's own connection to its server, TCP or QUIC, then cannot loop
+into the tunnel even if binding to the physical interface (`autoOutboundsInterface`) fails;
+v2rayN excludes the server the same way. Traffic of other programs to that address bypasses the
+proxy too, which is harmless: it is the proxy server.
+→ A name whose address changes during a session (dynamic DNS) needs a Reconnect.
+→ The lookup is network I/O by the app: it happens only when the user connects (or Connect at
+Launch does) and is listed in SECURITY.md.

@@ -109,14 +109,18 @@ import Testing
         let mask = try #require(stream["finalmask"] as? [String: Any])
         #expect(((mask["quicParams"] as? [String: Any])?["udpHop"] as? [String: Any])?["ports"] as? String == "443,20000-30000")
         #expect((mask["udp"] as? [[String: Any]])?.first?["type"] as? String == "salamander")
-        // Given by name: resolved by Xray's DNS module, with the direct resolver.
-        #expect((stream["sockopt"] as? [String: Any])?["domainStrategy"] as? String == "UseIPv4")
-        let dns = try #require((c["dns"] as? [String: Any])?["servers"] as? [Any])
-        #expect((dns.first as? [String: Any])?["domains"] as? [String] == ["geosite:private", "full:hy.example.com"])
-        // An address needs neither.
-        let byIP = XrayConfig.make(profile: profile, routing: .global, settings: Settings())
-        let first = ((byIP["dns"] as? [String: Any])?["servers"] as? [Any])?.first as? [String: Any]
-        #expect(first?["domains"] as? [String] == ["geosite:private"])
+    }
+
+    /// A server given by name is resolved before connecting and keeps its name for TLS (D57).
+    @Test func serverNameResolvedBeforeConnecting() throws {
+        let named = Profile(name: "h", address: "localhost", port: 443, uuid: "pw")
+        let r = try Session.resolved(named)
+        #expect(r.address == "127.0.0.1" && r.sni == "localhost")
+        var withSNI = named
+        withSNI.sni = "cdn.example.com"
+        #expect(try Session.resolved(withSNI).sni == "cdn.example.com")
+        #expect(try Session.resolved(profile) == profile)   // an address is left as it is
+        #expect(throws: Error.self) { try Session.resolved(Profile(name: "x", address: "no-such-host.invalid", port: 1, uuid: "u")) }
     }
 
     @Test func configSurvivesRootLogRewrite() throws {

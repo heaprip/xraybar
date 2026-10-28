@@ -20,7 +20,7 @@ enum XrayConfig {
                 ["tag": "block", "protocol": "blackhole"],
                 ["tag": "dns-out", "protocol": "dns"],
             ],
-            "dns": dns(routing, settings, server: profile.address),
+            "dns": dns(routing, settings),
             "routing": ["domainStrategy": routing.domainStrategy, "rules": rules(routing)],
         ]
     }
@@ -79,7 +79,6 @@ enum XrayConfig {
         default:
             break
         }
-        if byName(p.address) { stream["sockopt"] = ["domainStrategy": "UseIPv4"] }
         return [
             "tag": "proxy",
             "protocol": "vless",
@@ -99,7 +98,6 @@ enum XrayConfig {
         if let pin = p.pinSHA256 { tls["pinnedPeerCertSha256"] = pin.replacingOccurrences(of: ":", with: "").lowercased() }
         var stream: JSON = ["network": "hysteria", "hysteriaSettings": ["version": 2, "auth": p.uuid] as JSON,
                             "security": "tls", "tlsSettings": tls, "finalmask": finalmask]
-        if byName(p.address) { stream["sockopt"] = ["domainStrategy": "UseIPv4"] }
         return [
             "tag": "proxy",
             "protocol": "hysteria",
@@ -107,9 +105,6 @@ enum XrayConfig {
             "streamSettings": stream,
         ]
     }
-
-    /// A server given by name, not address: Xray resolves it with its DNS module, direct (`dns`).
-    static func byName(_ address: String) -> Bool { CIDR.parse(address) == nil && !address.contains(":") }
 
     // MARK: Routing
 
@@ -155,11 +150,10 @@ enum XrayConfig {
 
     /// Domains of enabled direct rules are resolved by the direct resolver (outside the
     /// tunnel, so they get local answers); everything else by the remote resolvers.
-    /// A server given by name is resolved direct too: through the proxy it could not be reached.
-    static func dns(_ routing: RoutingSet, _ settings: Settings, server: String = "") -> JSON {
+    static func dns(_ routing: RoutingSet, _ settings: Settings) -> JSON {
         let directDomains = routing.rules
             .filter { ($0.enabled ?? true) && $0.outboundTag == "direct" && $0.ruleType != 1 }
-            .flatMap(activeDomains) + (byName(server) && !server.isEmpty ? ["full:" + server] : [])
+            .flatMap(activeDomains)
         var servers: [Any] = []
         if !directDomains.isEmpty {
             servers += settings.directDNS.map {

@@ -5,6 +5,9 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- Fix: Hysteria 2 (and any server given by name) passed no traffic through the tunnel: Xray's
+  lookup of the server's name went into the tunnel. XrayBar now resolves the name before
+  connecting, and the server's address always bypasses the tunnel (D57).
 - Xray tested with XrayBar: v26.10.21 (checksums pinned; D56).
 - *Check for Newer Versions…* offers the newest release with two buttons; the version list in
   its alert did not open on macOS 27 (D56).
