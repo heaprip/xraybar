@@ -19,6 +19,21 @@ import Testing
         #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=ws") }
     }
 
+    @Test func hysteria2Link() throws {
+        let p = try Import.profile(fromLink:
+            "hysteria2://secret-pass@hy.example.com:8443/?sni=cdn.example.com&obfs=salamander&obfs-password=OBFS&insecure=1#Hy%202")
+        #expect(p.kind == "hysteria2" && p.name == "Hy 2")
+        #expect(p.address == "hy.example.com" && p.port == 8443 && p.uuid == "secret-pass")
+        #expect(p.sni == "cdn.example.com" && p.obfsPassword == "OBFS" && p.ports == nil && p.pinSHA256 == nil)
+
+        let hop = try Import.profile(fromLink: "hy2://user:pw@203.0.113.9:443,20000-30000/?pinSHA256=AB:cd:01")
+        #expect(hop.uuid == "user:pw" && hop.port == 443 && hop.ports == "443,20000-30000")
+        #expect(hop.sni.isEmpty && hop.obfsPassword == nil && hop.pinSHA256 == "AB:cd:01")
+        #expect(try Import.profile(fromLink: "hysteria2://pw@h.example:443?mport=5000-6000").ports == "5000-6000")
+        #expect(try Import.profile(fromLink: "hysteria2://pw@h.example").port == 443)
+        #expect(throws: ImportError.self) { try Import.profile(fromLink: "hysteria2://pw@h.example:443?obfs=gecko") }
+    }
+
     @Test func v2rayNRuleSetDecodes() throws {
         let json = #"[{"Id":"1","OutboundTag":"direct","Domain":["geosite:private"],"Ip":null,"Enabled":true,"RuleType":null,"Remarks":"LAN"}]"#
         let rules = try JSONDecoder().decode([Rule].self, from: Data(json.utf8))
@@ -80,6 +95,30 @@ import Testing
 
     /// The root session replaces the log section with plutil (xraybar-session.sh, D38). The
     /// rest of the config must come out unchanged, types included, and a hidden log path must not.
+    @Test func hysteria2ConfigShape() throws {
+        let hy = Profile(name: "h", address: "hy.example.com", port: 443, uuid: "pw", network: "hysteria",
+                         security: "tls", sni: "", fingerprint: "", kind: "hysteria2", obfsPassword: "o",
+                         ports: "443,20000-30000", pinSHA256: "AB:CD")
+        let c = XrayConfig.make(profile: hy, routing: .global, settings: Settings())
+        let out = try #require((c["outbounds"] as? [[String: Any]])?.first)
+        #expect(out["protocol"] as? String == "hysteria")
+        let stream = try #require(out["streamSettings"] as? [String: Any])
+        let tls = try #require(stream["tlsSettings"] as? [String: Any])
+        #expect(tls["serverName"] as? String == "hy.example.com" && tls["pinnedPeerCertSha256"] as? String == "abcd")
+        #expect((stream["hysteriaSettings"] as? [String: Any])?["auth"] as? String == "pw")
+        let mask = try #require(stream["finalmask"] as? [String: Any])
+        #expect(((mask["quicParams"] as? [String: Any])?["udpHop"] as? [String: Any])?["ports"] as? String == "443,20000-30000")
+        #expect((mask["udp"] as? [[String: Any]])?.first?["type"] as? String == "salamander")
+        // Given by name: resolved by Xray's DNS module, with the direct resolver.
+        #expect((stream["sockopt"] as? [String: Any])?["domainStrategy"] as? String == "UseIPv4")
+        let dns = try #require((c["dns"] as? [String: Any])?["servers"] as? [Any])
+        #expect((dns.first as? [String: Any])?["domains"] as? [String] == ["geosite:private", "full:hy.example.com"])
+        // An address needs neither.
+        let byIP = XrayConfig.make(profile: profile, routing: .global, settings: Settings())
+        let first = ((byIP["dns"] as? [String: Any])?["servers"] as? [Any])?.first as? [String: Any]
+        #expect(first?["domains"] as? [String] == ["geosite:private"])
+    }
+
     @Test func configSurvivesRootLogRewrite() throws {
         let c = XrayConfig.make(profile: profile, routing: .global, settings: Settings())
         var hidden = c
@@ -154,6 +193,27 @@ struct IntegrationTests {
             try? FileManager.default.removeItem(at: file)
             #expect(xray.terminationStatus == 0, "routing set \(routing.name)")
         }
+    }
+
+    /// Hysteria 2 with port hopping, salamander and a pin, through the same xray.
+    @Test func hysteria2ConfigXrayAccepts() throws {
+        let hy = try Import.profile(fromLink:
+            "hysteria2://pw@hy.example.com:443,20000-30000/?sni=hy.example.com&obfs=salamander&obfs-password=o&pinSHA256=" + String(repeating: "ab", count: 32))
+        let config = XrayConfig.validationCopy(XrayConfig.make(profile: hy, routing: .global, settings: Settings()))
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("xraybar-hy2-test.json")
+        try XrayConfig.data(config).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let xray = Process()
+        xray.executableURL = URL(fileURLWithPath: Settings.v2rayNXray)
+        xray.arguments = ["run", "-test", "-c", file.path]
+        xray.environment = ["XRAY_LOCATION_ASSET": Settings().assetsDir]
+        let out = Pipe()
+        xray.standardOutput = out
+        xray.standardError = out
+        try xray.run()
+        let text = String(decoding: out.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        xray.waitUntilExit()
+        #expect(xray.terminationStatus == 0, "\(text.suffix(400))")
     }
 }
 
@@ -235,6 +295,10 @@ struct AssetsDownloadTests {
         var back = try Import.profile(fromLink: Import.link(for: profile))
         back.id = profile.id
         #expect(back == profile)
+        let hy = try Import.profile(fromLink: "hysteria2://p%40ss@hy.example.com:443?sni=s.example&obfs=salamander&obfs-password=o&mport=5000-6000#H")
+        var hyBack = try Import.profile(fromLink: Import.link(for: hy))
+        hyBack.id = hy.id
+        #expect(hyBack == hy && hy.uuid == "p@ss")
     }
 
     @MainActor @Test func qrRoundTrip() throws {

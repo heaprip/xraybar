@@ -23,6 +23,7 @@ enum Import {
     /// The de-facto VLESS share-link format (XTLS/Xray-core discussion #716); raw transport only.
     static func profile(fromLink link: String) throws -> Profile {
         let link = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        if link.hasPrefix("hysteria2://") || link.hasPrefix("hy2://") { return try hysteria2(link) }
         guard let url = URLComponents(string: link), url.scheme == "vless",
               let host = url.host, let port = url.port, let user = url.user, !user.isEmpty
         else { throw ImportError.unsupported(String(link.prefix(16)) + "…") }
@@ -48,9 +49,52 @@ enum Import {
             spiderX: q["spx"] ?? "")
     }
 
-    /// The same format in the other direction, for sharing (and QR codes).
+    /// `hysteria2://password@host:port/?sni=…&obfs=salamander&obfs-password=…&pinSHA256=…#name`
+    /// (Hysteria 2's URI scheme; also `hy2://`). Port hopping: a list or range in place of the
+    /// port, or `mport=` as v2rayN writes it. `insecure=1` is ignored: the certificate is always
+    /// checked, as v2rayN does with Xray (D51).
+    static func hysteria2(_ text: String) throws -> Profile {
+        // URLComponents rejects "host:443,5000-6000": keep the first port, the list goes to `ports`.
+        var link = text, hop: String?
+        let head = text.prefix { $0 != "?" && $0 != "#" }
+        if let m = head.firstMatch(of: /:(\d+)([,-][\d,-]+)(?=\/?$)/) {
+            hop = String(m.output.1 + m.output.2)
+            link.replaceSubrange(m.range, with: ":" + m.output.1)
+        }
+        guard let url = URLComponents(string: link), let host = url.host, !host.isEmpty,
+              let user = url.user, !user.isEmpty
+        else { throw ImportError.unsupported(String(text.prefix(16)) + "…") }
+        let q = Dictionary((url.queryItems ?? []).map { ($0.name, $0.value ?? "") },
+                           uniquingKeysWith: { first, _ in first })
+        if let obfs = q["obfs"], !obfs.isEmpty, obfs != "salamander" { throw ImportError.unsupported("obfs \(obfs)") }
+        return Profile(
+            name: url.fragment?.removingPercentEncoding ?? host,
+            address: host.trimmingCharacters(in: CharacterSet(charactersIn: "[]")),
+            port: url.port ?? 443,
+            uuid: [user, url.password].compactMap { $0 }.joined(separator: ":"),
+            network: "hysteria", security: "tls", sni: q["sni"] ?? "", fingerprint: "",
+            kind: "hysteria2",
+            obfsPassword: q["obfs"] == "salamander" ? q["obfs-password"] : nil,
+            ports: hop ?? q["mport"].flatMap { $0.isEmpty ? nil : $0 },
+            pinSHA256: q["pinSHA256"].flatMap { $0.isEmpty ? nil : $0 })
+    }
+
+    /// The same formats in the other direction, for sharing (and QR codes).
     static func link(for p: Profile) -> String {
         var c = URLComponents()
+        if p.kind == "hysteria2" {
+            c.scheme = "hysteria2"
+            c.user = p.uuid
+            c.host = p.address.contains(":") ? "[\(p.address)]" : p.address
+            c.port = p.port
+            let query: [(String, String?)] = [
+                ("sni", p.sni), ("obfs", p.obfsPassword.map { _ in "salamander" }), ("obfs-password", p.obfsPassword),
+                ("pinSHA256", p.pinSHA256), ("mport", p.ports),
+            ]
+            c.queryItems = query.compactMap { k, v in v.flatMap { $0.isEmpty ? nil : URLQueryItem(name: k, value: $0) } }
+            c.fragment = p.name
+            return c.string ?? ""
+        }
         c.scheme = "vless"
         c.user = p.uuid
         c.host = p.address.contains(":") ? "[\(p.address)]" : p.address
@@ -79,7 +123,8 @@ enum Import {
 
     static let v2rayNDatabase = NSHomeDirectory() + "/Library/Application Support/v2rayN/guiConfigs/guiNDB.db"
 
-    /// Reads VLESS profiles and routing sets from v2rayN's SQLite database, read-only.
+    /// Reads VLESS and Hysteria 2 profiles and routing sets from v2rayN's SQLite database, read-only.
+    /// Hysteria 2 servers using what Xray here does not (gecko obfs, realm) are left out.
     static func fromV2rayN(path: String = v2rayNDatabase) throws -> (profiles: [Profile], routing: [RoutingSet]) {
         var db: OpaquePointer?
         guard sqlite3_open_v2("file:\(path)?mode=ro", &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK
@@ -88,9 +133,18 @@ enum Import {
 
         let profiles = try rows(db, """
             select Remarks, Address, Port, Password, Network, StreamSecurity, Sni, Fingerprint,
-                   PublicKey, ShortId, SpiderX, ProtoExtra from ProfileItem where ConfigType = 5
-            """).map { r in
+                   PublicKey, ShortId, SpiderX, ProtoExtra, ConfigType, CertSha from ProfileItem
+            where ConfigType in (5, 7)
+            """).compactMap { r -> Profile? in
             let extra = (try? JSONSerialization.jsonObject(with: Data(r[11].utf8))) as? [String: Any] ?? [:]
+            let text = { (key: String) in (extra[key] as? String).flatMap { $0.isEmpty ? nil : $0 } }
+            if r[12] == "7" {   // EConfigType.Hysteria2
+                guard ["GeckoMinPacketSize", "GeckoMaxPacketSize", "Hy2RealmUrl"].allSatisfy({ text($0) == nil }) else { return nil }
+                return Profile(name: r[0], address: r[1], port: Int(r[2]) ?? 443, uuid: r[3], network: "hysteria",
+                               security: "tls", sni: r[6], fingerprint: "", kind: "hysteria2",
+                               obfsPassword: text("SalamanderPass"), ports: text("Ports")?.replacingOccurrences(of: ":", with: "-"),
+                               pinSHA256: r[13].isEmpty ? nil : r[13])
+            }
             return Profile(
                 name: r[0], address: r[1], port: Int(r[2]) ?? 443, uuid: r[3],
                 flow: extra["Flow"] as? String ?? "",

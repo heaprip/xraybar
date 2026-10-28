@@ -692,3 +692,29 @@ Share links still standardize on `pbk`, and XrayBar's persisted `Profile.publicK
 old libraries source-compatible.
 → Generated Xray JSON uses `realitySettings.password`. Import, storage and exported VLESS
 links remain unchanged. A config-shape test prevents accidentally returning to the legacy key.
+
+## D51. Hysteria 2 through Xray, not a separate hysteria binary (2026-10-28)
+
+The author is migrating servers to Hysteria 2 (salamander, port hopping later, certificates from
+ZeroSSL, maybe Let's Encrypt certificates for IP addresses) and keeps VLESS + REALITY. They
+leaned towards running the official hysteria client for such servers.
+Checked: Xray 26.5.9 (the minimum, D22) and 26.10.17 accept a `hysteria` outbound (version 2)
+with `finalmask` (salamander, `udpHop`, congestion), and both carried traffic to the author's
+server through a SOCKS test. v2rayN on this Mac runs Hysteria 2 with Xray as well.
+→ Hysteria 2 is a kind of `Profile` (`kind: "hysteria2"`, optional fields so older libraries
+load). The password lives where the VLESS id does (`uuid`, so in the keychain, D45); the
+salamander password is an obfuscation key shared by the server's users and stays in library.json.
+→ Rejected, a hysteria binary: two TUNs cannot own the default route, and as a local SOCKS
+proxy behind Xray's TUN its own UDP would loop into the tunnel (Xray protects only its own
+sockets, `autoOutboundsInterface`); a second root-run binary with its own pinning and updates;
+routing sets do not apply to it. Revisit only if Xray's Hysteria 2 proves clearly worse on real servers.
+→ Links: `hysteria2://` / `hy2://` with `sni`, `obfs=salamander`, `obfs-password`, `pinSHA256`,
+and port hopping as a list/range in place of the port or as `mport=` (v2rayN). `insecure=1` is
+ignored, as v2rayN does with Xray: the certificate is always checked against the system CAs (and
+the pin, if any). With no `sni` the server's address is the TLS name, which suits certificates
+for IP addresses. Other obfuscation (gecko) and realm are refused; v2rayN servers using them are
+skipped on import.
+→ A server given by name was resolved through the proxy, which needs it resolved first. Now
+the proxy outbound sets `sockopt.domainStrategy` and the name goes to the direct resolver, for
+VLESS too.
+→ Swift budget 1700 → 1800 (parsing, generation, import, sharing).

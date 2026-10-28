@@ -4,13 +4,13 @@
 
 import Foundation
 
-/// A VLESS server. Other protocols are added only when actually needed.
+/// A server: VLESS (raw transport, REALITY or TLS), or Hysteria 2 (D51).
 struct Profile: Codable, Equatable, Identifiable, Sendable {
     var id = UUID()
     var name: String
     var address: String
     var port: Int
-    var uuid: String
+    var uuid: String             // VLESS id; Hysteria 2: the auth password. In the keychain (D45)
     var flow = ""
     var encryption = "none"
     var network = "raw"          // Xray transport; "tcp" in share links
@@ -20,6 +20,11 @@ struct Profile: Codable, Equatable, Identifiable, Sendable {
     var publicKey = ""           // reality
     var shortId = ""             // reality
     var spiderX = ""             // reality
+    /// nil: VLESS. "hysteria2": `uuid` is the password, `sni` the TLS name (empty: the address).
+    var kind: String?
+    var obfsPassword: String?    // hysteria2 salamander
+    var ports: String?           // hysteria2 port hopping, "20000-30000" or "443,5000-6000"
+    var pinSHA256: String?       // hysteria2: the certificate's SHA-256, checked besides the CA
 }
 
 /// One routing rule, in v2rayN's `RulesItem` shape so v2rayN routing sets and

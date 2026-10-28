@@ -20,7 +20,7 @@ with nothing else in between.
 
 > Status: early; used daily by the author. Not verified yet: IPv6 through the tunnel on a real
 > IPv6 network, the DNS override across a switch between network services (Wi-Fi to Ethernet).
-> Not done: transports other than raw.
+> Not done: VLESS transports other than raw (ws, grpc, xhttp…); Hysteria 2's gecko obfuscation and realm.
 
 ## How it was built
 
@@ -72,9 +72,9 @@ For development, `swift run` works too (English only: translations need the app 
 
 ## Getting started
 
-1. **Add a server.** *Import Link or QR Code from Clipboard*: copy a `vless://…` link, or press
-   ⌘⇧⌃4 and select a QR code (the screenshot goes to the clipboard). Or *Import from v2rayN…*
-   (read-only).
+1. **Add a server.** *Import Link or QR Code from Clipboard*: copy a `vless://…` or
+   `hysteria2://…` link, or press ⌘⇧⌃4 and select a QR code (the screenshot goes to the
+   clipboard). Or *Import from v2rayN…* (read-only, see below).
 2. **Get Xray and routing data.** *Xray › Download v26.9.9* and *Update Routing Data*
    (checksum-verified). Installing Xray asks for your password once: it goes into a root-owned
    folder, the only place XrayBar runs it from as root. With v2rayN installed, *Copy Xray
@@ -83,6 +83,26 @@ For development, `swift run` works too (English only: translations need the app 
    *Use Touch ID to Connect…* installs a small root-owned helper once; after that, Touch ID once per login.
 4. **Forget about it.** *Connect at Launch* (on by default) plus *Open at Login*: the Mac starts,
    you touch the sensor, you're connected.
+
+### Import from v2rayN
+
+*Import from v2rayN…* reads v2rayN's database (`~/Library/Application Support/v2rayN/guiConfigs/guiNDB.db`),
+opened read-only: v2rayN is never changed and may keep running. It can be chosen again at any
+time; what is already in XrayBar is skipped (a server with the same address, port and
+credential; a routing set with the same name and rules).
+
+| From v2rayN | Imported |
+|---|---|
+| VLESS servers (REALITY or TLS) | yes; the credential goes to the keychain |
+| Hysteria 2 servers (password, SNI, salamander, port hopping, certificate pin) | yes; gecko obfuscation and realm are not supported by XrayBar, such servers are left out |
+| VMess, Trojan, Shadowsocks, WireGuard, … | no |
+| Routing sets (all of them, e.g. runetfreedom's *RUv1-…*) | yes, rules unchanged; choose one under *Routing* |
+| Subscriptions, DNS settings, the active server or routing set, Xray settings | no |
+
+Routing *data* (`geoip.dat`, `geosite.dat`) is not routing *rules*: *Update Routing Data*
+downloads the lists, and a routing set decides what goes direct, through the proxy or is
+blocked. Without an imported set XrayBar has only *Global* (everything through the proxy,
+except the local network and ads).
 
 ## The menu
 

@@ -466,7 +466,7 @@ final class AppModel {
             let imported = try Import.fromV2rayN()
             let added = Import.merge(imported, into: &library)
             save()
-            alert("Imported from v2rayN", String(format: L("%ld new item(s): %ld VLESS server(s), %ld routing set(s) found. "
+            alert("Imported from v2rayN", String(format: L("%ld new item(s): %ld server(s) (VLESS, Hysteria 2), %ld routing set(s) found. "
                                                              + "v2rayN was only read, not changed."),
                                                  added, imported.profiles.count, imported.routing.count))
         } catch {

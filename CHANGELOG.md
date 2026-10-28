@@ -5,6 +5,12 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- Hysteria 2 servers, through Xray itself: `hysteria2://` and `hy2://` links and QR codes,
+  salamander obfuscation, port hopping (a port list or range, or `mport=`), certificate pin
+  (`pinSHA256`); also imported from v2rayN and shared back as a link (D51).
+- Fix: a server given by name (not an address) is resolved with the direct DNS resolver;
+  through the proxy it could not be reached (D51).
+- README: what *Import from v2rayN…* brings over and what not; routing data vs routing rules.
 - Compatibility: generated REALITY configs now use Xray's current `password` field for the
   server public key; VLESS share links continue to use the standard `pbk` parameter (D50).
 - Fix (macOS 27): the administrator prompt took no password, with a spinning cursor, while

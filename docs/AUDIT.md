@@ -56,7 +56,7 @@ For each item, answer yes/no with evidence:
 - [ ] Root-run xray cannot be pointed at a config that writes files (root rewrites the log section).
 
 **Data**
-- [ ] Profiles are only written to the documented directory; server credentials (VLESS ids) to
+- [ ] Profiles are only written to the documented directory; server credentials (VLESS ids, Hysteria 2 passwords) to
       the one keychain item "XrayBar server credentials", or to `library.json` if the keychain
       is unavailable.
 - [ ] Nothing reads browser data, Keychain items not created by the app, SSH keys,

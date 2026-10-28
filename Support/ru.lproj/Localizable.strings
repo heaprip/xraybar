@@ -115,7 +115,7 @@
 "(already added)" = "(уже добавлен)";
 "Import failed" = "Не удалось импортировать";
 "Imported from v2rayN" = "Импортировано из v2rayN";
-"%ld new item(s): %ld VLESS server(s), %ld routing set(s) found. v2rayN was only read, not changed." = "Новых элементов: %ld. Найдено серверов VLESS: %ld, наборов правил: %ld. v2rayN только прочитан, не изменён.";
+"%ld new item(s): %ld server(s) (VLESS, Hysteria 2), %ld routing set(s) found. v2rayN was only read, not changed." = "Новых элементов: %ld. Найдено серверов (VLESS, Hysteria 2): %ld, наборов правил: %ld. v2rayN только прочитан, не изменён.";
 "Scan with another device. The code contains the server's credentials." = "Отсканируйте другим устройством. Код содержит учётные данные сервера.";
 "Done" = "Готово";
 "Copy Link" = "Скопировать ссылку";
