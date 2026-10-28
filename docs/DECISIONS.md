@@ -683,3 +683,12 @@ appeared, so the trial request (D23) went out over Wi-Fi, succeeded, and marked 
 → Connecting becomes Connected only when xray runs and 1.1.1.1 routes through a utun, which is
 the same test the session script waits for. A start that never routes now ends as "Xray did
 not start" with the log, and the trial only runs through the tunnel.
+
+## D50. Emit the current REALITY client key field (2026-10-26)
+
+Xray's REALITY client setting formerly called the server's public key `publicKey`; current
+Xray documentation calls it `password` to discourage treating it as publicly distributable.
+Share links still standardize on `pbk`, and XrayBar's persisted `Profile.publicKey` name keeps
+old libraries source-compatible.
+→ Generated Xray JSON uses `realitySettings.password`. Import, storage and exported VLESS
+links remain unchanged. A config-shape test prevents accidentally returning to the legacy key.

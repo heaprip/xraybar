@@ -5,6 +5,8 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- Compatibility: generated REALITY configs now use Xray's current `password` field for the
+  server public key; VLESS share links continue to use the standard `pbk` parameter (D50).
 - Fix (macOS 27): the administrator prompt took no password, with a spinning cursor, while
   XrayBar's menu stayed open behind it (D49).
 - Fix: "The helper is not responding" at the first Connect after installing or updating it.

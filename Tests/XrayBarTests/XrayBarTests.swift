@@ -63,6 +63,12 @@ import Testing
         var verbose = Settings(); verbose.detailedLog = true
         #expect(XrayConfig.log(verbose)["access"] == nil)
 
+        let outbound = try #require((c["outbounds"] as? [[String: Any]])?.first)
+        let stream = try #require(outbound["streamSettings"] as? [String: Any])
+        let reality = try #require(stream["realitySettings"] as? [String: Any])
+        #expect(reality["password"] as? String == "k")
+        #expect(reality["publicKey"] == nil)
+
         let rules = try #require((c["routing"] as? [String: Any])?["rules"] as? [[String: Any]])
         #expect(rules.allSatisfy { $0["process"] == nil })       // D2
         #expect(rules.last?["inboundTag"] as? [String] == ["dns-module"])
