@@ -5,19 +5,29 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+## 0.4.0
+
+Hysteria 2 servers, and fixes for macOS 27.
+
+**New**
 - Hysteria 2 servers, through Xray itself: `hysteria2://` and `hy2://` links and QR codes,
   salamander obfuscation, port hopping (a port list or range, or `mport=`), certificate pin
-  (`pinSHA256`); also imported from v2rayN and shared back as a link (D51).
-- Fix: a server given by name (not an address) is resolved with the direct DNS resolver;
-  through the proxy it could not be reached (D51).
+  (`pinSHA256`); also imported from v2rayN and shared back as a link. The certificate is
+  always checked (D51).
 - README: what *Import from v2rayN…* brings over and what not; routing data vs routing rules.
-- Compatibility: generated REALITY configs now use Xray's current `password` field for the
-  server public key; VLESS share links continue to use the standard `pbk` parameter (D50).
-- Fix (macOS 27): the administrator prompt took no password, with a spinning cursor, while
+
+**Fixes**
+- macOS 27: the administrator prompt took no password, with a spinning cursor, while
   XrayBar's menu stayed open behind it (D49).
-- Fix: "The helper is not responding" at the first Connect after installing or updating it.
-- Fix: the menu showed Connected, and a new Xray counted as working, before Xray had routed
-  any traffic into the tunnel (D49).
+- The menu showed Connected, and a new Xray counted as working, before Xray had routed any
+  traffic into the tunnel (D49).
+- "The helper is not responding" at the first Connect after installing or updating it.
+- A server given by name (not an address) is resolved with the direct DNS resolver; through
+  the proxy it could not be reached (D51).
+- REALITY configs use Xray's current `realitySettings.password` for the server's key; share
+  links keep `pbk` (D50).
+
+**Other**
 - Releases are published as Latest (they did not show in GitHub's sidebar as prereleases).
 - README: a shorter "How it was built"; Russian docs name menu items as the Russian UI does;
   AUDIT covers the install script, the helper, the keychain item and release builds;
