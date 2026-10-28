@@ -757,3 +757,21 @@ enforced: that is the part whose size matters most for review.
 → Positioning changed with this release: "a menu-bar client built on Xray-core" (VLESS and
 Hysteria 2), not "a client for Xray's native TUN"; the README says why the project exists and
 puts "Don't trust, verify" right after it.
+
+## D55. Explain the keychain prompt before macOS shows it (2026-10-29)
+
+After every update macOS asks: "XrayBar wants to use your confidential information stored in
+'XrayBar server credentials' in your keychain". An ad-hoc signed app is a new app to the keychain
+each build (D45). The author found the wording alarming ("as if it is about to steal every
+password"), and the app cannot change it.
+→ XrayBar remembers the signature (the code directory hash) of the build that last read or wrote
+its item, in `keychain-signature` in its data folder. When the item exists and the running build
+differs, it starts without the credentials, shows its own alert first (what the item is, that
+nothing else is read, why macOS asks, to choose Always Allow), then loads them, which brings
+up the system prompt. Checking that the item exists reads only its attributes: no prompt.
+→ After "Allow" (not "Always Allow") macOS asks at every launch of that build, now without the
+explanation; the alert recommends Always Allow.
+→ Not possible without a Developer ID: the data-protection keychain, where access goes by a
+team's access group instead of each build's signature. Not acceptable: an item any app may read.
+→ The menu bar mark (D53) is drawn faint rather than outlined when not connected: the author
+found the outlines odd at menu bar size; at 18 points they blur into a mesh.

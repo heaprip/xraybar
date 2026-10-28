@@ -24,9 +24,11 @@ enum Store {
     /// be read, and then they stay in library.json (D45).
     @MainActor private static var inKeychain: [String: String]?
 
-    @MainActor static func load() -> Library {
-        inKeychain = Keychain.read()
-        if inKeychain == nil { appLog.error("Keychain not readable: server ids stay in library.json") }
+    /// `keychain: false` leaves the credentials out (empty) until XrayBar has explained the
+    /// system's keychain prompt (D55); then the app loads again.
+    @MainActor static func load(keychain: Bool = true) -> Library {
+        inKeychain = keychain ? Keychain.read() : nil
+        if keychain && inKeychain == nil { appLog.error("Keychain not readable: server ids stay in library.json") }
         guard let data = try? Data(contentsOf: libraryFile) else { return Library() }
         guard var library = try? JSONDecoder().decode(Library.self, from: data) else {
             // Unreadable (e.g. older format): keep it aside rather than overwrite it later.
@@ -70,6 +72,30 @@ enum Store {
 /// so macOS asks for access once after an app update (an ad-hoc signed app is "new" each
 /// build), not once per server (D45).
 enum Keychain {
+    /// The signature of the build that last read or wrote the item. An ad-hoc signed app is new
+    /// to the keychain after every update, so a different one means macOS will ask (D55).
+    private static let lastSignature = Store.dir.appendingPathComponent("keychain-signature")
+
+    /// The item exists and this build has not used it yet: reading it now shows macOS's prompt.
+    /// Attributes are readable without the prompt.
+    static var willAsk: Bool {
+        var query = item
+        query[kSecReturnAttributes as String] = true
+        return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
+            && (try? String(contentsOf: lastSignature, encoding: .utf8)) != signature()
+    }
+
+    private static func signature() -> String? {
+        var code: SecCode?, staticCode: SecStaticCode?, info: CFDictionary?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code,
+              SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode,
+              SecCodeCopySigningInformation(staticCode, [], &info) == errSecSuccess,
+              let unique = (info as? [String: Any])?[kSecCodeInfoUnique as String] as? Data else { return nil }
+        return unique.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func used() { try? signature().map { try Store.write(Data($0.utf8), to: lastSignature) } }
+
     private static var item: [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: "io.github.heaprip.xraybar",
@@ -82,7 +108,9 @@ enum Keychain {
         query[kSecReturnData as String] = true
         var result: CFTypeRef?
         switch SecItemCopyMatching(query as CFDictionary, &result) {
-        case errSecSuccess: return (result as? Data).flatMap { try? JSONDecoder().decode([String: String].self, from: $0) }
+        case errSecSuccess:
+            used()
+            return (result as? Data).flatMap { try? JSONDecoder().decode([String: String].self, from: $0) }
         case errSecItemNotFound: return [:]
         default: return nil
         }
@@ -93,10 +121,12 @@ enum Keychain {
     static func write(_ secrets: [String: String]) -> Bool {
         guard let data = try? JSONEncoder().encode(secrets) else { return false }
         let status = SecItemUpdate(item as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-        guard status == errSecItemNotFound else { return status == errSecSuccess }
+        guard status == errSecItemNotFound else { if status == errSecSuccess { used() }; return status == errSecSuccess }
         var add = item
         add[kSecValueData as String] = data
         add[kSecAttrLabel as String] = "XrayBar server credentials"
-        return SecItemAdd(add as CFDictionary, nil) == errSecSuccess
+        guard SecItemAdd(add as CFDictionary, nil) == errSecSuccess else { return false }
+        used()
+        return true
     }
 }

@@ -9,7 +9,7 @@ import ServiceManagement
 @MainActor
 @Observable
 final class AppModel {
-    private(set) var library = Store.load()
+    private(set) var library = Store.load(keychain: !Keychain.willAsk)
     private(set) var state: Session.State = .disconnected
     private(set) var updating = false
     /// A server or routing change while connected: the menu offers Reconnect.
@@ -46,10 +46,26 @@ final class AppModel {
     /// the user needs no click at all (Connect at Launch, on by default). Connecting still asks
     /// for authorization (Touch ID with the helper): root must not start xray unasked (D34).
     private func launched() {
+        if Keychain.willAsk { explainKeychain() }
         if Session.needsRestore { return offerRestore() }
         if connectsAtLaunch, library.profile != nil, state == .disconnected, Session.otherTunnel() == nil {
             connect()
         }
+    }
+
+    /// macOS's own prompt ("wants to use your confidential information") cannot be worded by the
+    /// app, so XrayBar says first what it is about, then loads the credentials (D55).
+    private func explainKeychain() {
+        NSApp.activate()
+        let a = Self.newAlert()
+        a.messageText = "macOS will ask about XrayBar's keychain item"
+        a.informativeText = "XrayBar keeps your servers' credentials in your login keychain, in one item of its own: "
+            + "“XrayBar server credentials”. It reads nothing else there. This copy of XrayBar is new to the keychain "
+            + "(it was updated or rebuilt), so macOS now asks whether it may read that item. Enter your login password "
+            + "and choose Always Allow to be asked again only after the next update."
+        a.addButton(withTitle: "Continue")
+        a.runModal()
+        library = Store.load()
     }
 
     var connectsAtLaunch: Bool { library.settings.connectAtLaunch ?? true }

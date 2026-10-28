@@ -135,17 +135,17 @@ struct AppMenu: View {
 }
 
 /// XrayBar's mark: four petals around an ×-shaped gap (scripts/make-icon.swift draws the same
-/// shape for the app icon). A template image, so macOS colours it for the menu bar: outlined
-/// when not connected, one filled petal running round while connecting, all filled when
-/// connected; a dot when the helper must be updated (D53).
+/// shape for the app icon). A template image, so macOS colours it for the menu bar: faint when
+/// not connected, one solid petal running round while connecting, solid when connected; a dot
+/// when the helper must be updated (D53). Faint, not outlined: outlines blur at 18 points.
 enum Mark {
     static func image(filled: Set<Int>, badge: Bool = false) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
-            NSColor.black.set()
             for i in 0..<4 {
-                let p = petal(i, in: rect.insetBy(dx: 1, dy: 1))
-                if filled.contains(i) { p.fill() } else { p.lineWidth = 1; p.lineJoinStyle = .round; p.stroke() }
+                NSColor.black.withAlphaComponent(filled.contains(i) ? 1 : 0.35).set()
+                petal(i, in: rect.insetBy(dx: 0.5, dy: 0.5)).fill()
             }
+            NSColor.black.set()
             if badge {
                 let dot = NSRect(x: 12, y: 0, width: 6, height: 6)
                 NSGraphicsContext.current?.compositingOperation = .clear
@@ -161,7 +161,7 @@ enum Mark {
 
     /// Petal 0 points up, then clockwise: a kite from near the centre with concave outer edges.
     static func petal(_ i: Int, in r: NSRect) -> NSBezierPath {
-        let radius = r.width / 2, inner = radius * 0.14, w = radius * 0.30, m = radius * 0.36
+        let radius = r.width / 2, inner = radius * 0.10, w = radius * 0.32, m = radius * 0.36
         let p = NSBezierPath()
         p.move(to: NSPoint(x: 0, y: inner))
         p.line(to: NSPoint(x: w, y: m))

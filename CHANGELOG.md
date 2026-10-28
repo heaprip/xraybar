@@ -5,9 +5,11 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
-- New mark: a four-petal star, white on black for the app icon. In the menu bar it is hollow
+- New mark: a four-petal star, white on black for the app icon. In the menu bar it is faint
   when not connected, a petal runs round while connecting, filled when connected; a dot means
   the helper needs an update (D53).
+- After an update, XrayBar explains macOS's keychain prompt before it appears: what its one
+  item holds, that nothing else is read, and to choose Always Allow (D55).
 - *Diagnostics › Reset XrayBar…* (hold Option): removes everything XrayBar keeps (servers,
   settings, routing data, Xray versions, the helper, the keychain item) with one password, then
   quits (D52).

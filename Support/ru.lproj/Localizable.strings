@@ -141,6 +141,11 @@
 "v2rayN import failed: %@" = "Не удалось импортировать из v2rayN: %@";
 "%@: checksum mismatch, nothing was installed" = "%@: контрольная сумма не совпала, ничего не установлено";
 
+/* Keychain prompt explained (D55) */
+"macOS will ask about XrayBar's keychain item" = "macOS спросит о записи XrayBar в связке ключей";
+"XrayBar keeps your servers' credentials in your login keychain, in one item of its own: “XrayBar server credentials”. It reads nothing else there. This copy of XrayBar is new to the keychain (it was updated or rebuilt), so macOS now asks whether it may read that item. Enter your login password and choose Always Allow to be asked again only after the next update." = "XrayBar хранит учётные данные ваших серверов в связке ключей входа, в одной своей записи: «XrayBar server credentials». Больше он там ничего не читает. Эта копия XrayBar для связки ключей новая (приложение обновили или пересобрали), поэтому macOS спросит, можно ли ей читать эту запись. Введите пароль входа и выберите «Всегда разрешать», тогда вопрос повторится только после следующего обновления.";
+"Continue" = "Продолжить";
+
 /* Reset (D52) */
 "Reset XrayBar…" = "Сбросить XrayBar…";
 "Reset XrayBar?" = "Сбросить XrayBar?";
