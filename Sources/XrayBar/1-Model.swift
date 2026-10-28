@@ -71,7 +71,8 @@ struct Settings: Codable, Equatable, Sendable {
     /// Set as system DNS while connected; these addresses route into the tunnel (D3).
     var systemDNS = ["1.1.1.1", "8.8.8.8"]
     var tunMTU = 9000
-    /// Off: errors only. On: warnings plus one line per connection, for diagnosing routing.
+    /// Off: errors only. On: info (DNS answers, why a connection to the server failed) plus one
+    /// line per connection, for diagnosing routing and connections.
     /// Fields added after stage 1 are optional, so older library.json files keep loading.
     var detailedLog: Bool?
     /// Where geoip.dat/geosite.dat come from when XrayBar downloads its own copy (7-Assets).

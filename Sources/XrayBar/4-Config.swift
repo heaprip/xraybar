@@ -31,7 +31,7 @@ enum XrayConfig {
     /// Default is errors only and no per-connection access log, so the log stays small.
     static func log(_ settings: Settings) -> JSON {
         settings.detailedLog == true
-            ? ["loglevel": "warning"]                     // access log goes to stdout
+            ? ["loglevel": "info"]   // access log to stdout; info: why an outbound failed (D58)
             : ["loglevel": "error", "access": "none"]
     }
 

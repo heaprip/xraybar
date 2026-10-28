@@ -5,6 +5,7 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- *Detailed Log* shows Xray's info level: why a connection to the server failed, DNS answers (D58).
 - Fix: Hysteria 2 (and any server given by name) passed no traffic through the tunnel: Xray's
   lookup of the server's name went into the tunnel. XrayBar now resolves the name before
   connecting, and the server's address always bypasses the tunnel (D57).

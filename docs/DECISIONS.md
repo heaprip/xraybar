@@ -812,3 +812,11 @@ proxy too, which is harmless: it is the proxy server.
 → A name whose address changes during a session (dynamic DNS) needs a Reconnect.
 → The lookup is network I/O by the app: it happens only when the user connects (or Connect at
 Launch does) and is listed in SECURITY.md.
+
+## D58. Detailed Log at Xray's info level (2026-10-29)
+
+With Hysteria 2 through the TUN still failing after D57, the log showed only DNS-over-HTTPS
+errors ("read/write on closed pipe"). Xray reports why an outbound failed ("failed to process
+outbound traffic > …") and its DNS answers at the info level, which Detailed Log (warning) hid.
+→ Detailed Log is `info` plus the access log. Still off by default; the log is readable only
+by admin users (`/var/run/xraybar/xray.log`, D38) and cleared at restart.
