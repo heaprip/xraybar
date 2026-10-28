@@ -116,7 +116,7 @@ final class AppModel {
         return l
     }
 
-    /// "Xray v26.9.9": the version in use.
+    /// "Xray v26.10.21": the version in use.
     var xrayTitle: String {
         xrayInUse.map { "Xray " + Self.xrayName(URL(fileURLWithPath: $0).deletingLastPathComponent().lastPathComponent) }
             ?? "Xray"
@@ -249,21 +249,22 @@ final class AppModel {
         Task {
             defer { updating = false }
             do {
-                let installed = Assets.installedXray()
-                let fresh = try await Assets.availableXray().filter { !installed.contains($0) }
-                guard !fresh.isEmpty else { return alert("No newer versions", "All recent Xray releases are installed.") }
+                // Only the newest release, and only if newer than every installed one. No version
+                // list in the alert: on macOS 27 its pop-up did not open while the menu bar menu
+                // held menu tracking (D56).
+                let newestInstalled = Assets.installedXray().first.map(Assets.version) ?? []
+                guard let tag = try await Assets.availableXray().first,
+                      newestInstalled.lexicographicallyPrecedes(Assets.version(tag))
+                else { return alert("No newer versions", "The newest Xray release is installed.") }
                 let a = Self.newAlert()
-                a.messageText = "Download Xray"
-                a.informativeText = String(format: L("Releases newer than %@, from GitHub (Xray marks them all as pre-releases). "
-                    + "Checked against each release's SHA-256. The first connection with it is a trial: if no traffic "
-                    + "passes, you can switch back."), Assets.minimumXray.map(String.init).joined(separator: "."))
-                let list = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 200, height: 26))
-                list.addItems(withTitles: fresh)
-                a.accessoryView = list
+                a.messageText = String(format: L("Download Xray %@?"), tag)
+                a.informativeText = String(format: L("The newest Xray release on GitHub, checked against its SHA-256. XrayBar "
+                    + "was tested with %@. The first connection with it is a trial: if no traffic passes, you can switch back."),
+                    Assets.testedXray)
                 a.addButton(withTitle: "Download and Use")
                 a.addButton(withTitle: "Cancel")
                 NSApp.activate()
-                if a.runModal() == .alertFirstButtonReturn, let tag = list.titleOfSelectedItem { install(tag) }
+                if a.runModal() == .alertFirstButtonReturn { install(tag) }
             } catch {
                 alert("Could not check for versions", error.localizedDescription)
             }

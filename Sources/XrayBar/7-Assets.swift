@@ -45,14 +45,14 @@ enum Assets {
     static let minimumXray = [26, 5, 9]
 
     /// The version tested with this XrayBar and the SHA-256 of its zip per CPU. Cross-checked:
-    /// the release's .dgst, an own download, and the binary is byte-identical to v2rayN 7.25.2's.
-    static let testedXray = "v26.9.9"
+    /// the release's .dgst, GitHub's digest of the asset, and an own download (D56).
+    static let testedXray = "v26.10.21"
     #if arch(arm64)
     static let zipName = "Xray-macos-arm64-v8a.zip"
-    static let testedSHA256 = "b7cf765d60ccc703853d4218c49a1eacc5bca764543b9540bdeaf45c951afc7d"
+    static let testedSHA256 = "926cc55fda2a8757dabe4f22dc98772f218ace025f101bd0b68aee232e59d5dc"
     #else
     static let zipName = "Xray-macos-64.zip"
-    static let testedSHA256 = "32b5d106b9936f3ae2044cd283d9e22749b57fd30b34a58792b86c90018bb5e4"
+    static let testedSHA256 = "8e5169b429e76ce5f550c8294db465bc259f30c158ba900aa40802b76ad2f66e"
     #endif
 
     /// No cookies, no cache, nothing persisted by URLSession.
@@ -71,8 +71,8 @@ enum Assets {
             .sorted { version($1).lexicographicallyPrecedes(version($0)) }
     }
 
-    /// Release tags on GitHub, prereleases included (every Xray release since 26.5 is one),
-    /// that are new enough for native TUN, newest first.
+    /// Release tags on GitHub, prereleases included (most Xray releases since 26.5 are), that are
+    /// new enough for native TUN, newest first.
     static func availableXray() async throws -> [String] {
         let (data, response) = try await retrying {
             try await session.data(from: URL(string: "https://api.github.com/repos/XTLS/Xray-core/releases?per_page=20")!)

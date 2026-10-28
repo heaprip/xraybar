@@ -5,6 +5,9 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- Xray tested with XrayBar: v26.10.21 (checksums pinned; D56).
+- *Check for Newer Versions…* offers the newest release with two buttons; the version list in
+  its alert did not open on macOS 27 (D56).
 - New mark: a four-petal star, white on black for the app icon. In the menu bar it is faint
   when not connected, a petal runs round while connecting, filled when connected; a dot means
   the helper needs an update (D53).

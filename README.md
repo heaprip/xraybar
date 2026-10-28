@@ -104,7 +104,7 @@ For development, `swift run` works too (English only: translations need the app 
 1. **Add a server.** *Import Link or QR Code from Clipboard*: copy a `vless://…` or
    `hysteria2://…` link, or press ⌘⇧⌃4 and select a QR code (the screenshot goes to the
    clipboard). Or *Import from v2rayN…* (read-only, see below).
-2. **Get Xray and routing data.** *Xray › Download v26.9.9* and *Update Routing Data*
+2. **Get Xray and routing data.** *Xray › Download v26.10.21* and *Update Routing Data*
    (checksum-verified). Installing Xray asks for your password once: it goes into a root-owned
    folder, the only place XrayBar runs it from as root. With v2rayN installed, *Copy Xray
    from v2rayN…* does the same with its copy; until then the routing data comes from v2rayN.

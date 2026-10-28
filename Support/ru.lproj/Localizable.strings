@@ -67,10 +67,10 @@
 "%@. Checksums verified. Takes effect on the next Connect." = "%@. Контрольные суммы проверены. Применится при следующем подключении.";
 "Update failed" = "Не удалось обновить";
 "No newer versions" = "Новых версий нет";
-"All recent Xray releases are installed." = "Все последние релизы Xray установлены.";
-"Download Xray" = "Скачать Xray";
-"Releases newer than %@, from GitHub (Xray marks them all as pre-releases). Checked against each release's SHA-256. The first connection with it is a trial: if no traffic passes, you can switch back." = "Релизы новее %@ с GitHub (Xray помечает их все как пре-релизы). Проверяются по SHA-256 каждого релиза. Первое подключение с новой версией — пробное: если трафик не пройдёт, можно вернуться.";
 "Download and Use" = "Скачать и использовать";
+"Download Xray %@?" = "Скачать Xray %@?";
+"The newest Xray release is installed." = "Самый новый релиз Xray уже установлен.";
+"The newest Xray release on GitHub, checked against its SHA-256. XrayBar was tested with %@. The first connection with it is a trial: if no traffic passes, you can switch back." = "Самый новый релиз Xray на GitHub, проверяется по SHA-256. XrayBar проверен с %@. Первое подключение с ним пробное: если трафик не пройдёт, можно вернуться к прежней версии.";
 "Could not check for versions" = "Не удалось проверить версии";
 "Xray %@ installed" = "Xray %@ установлен";
 "It is used from the next Connect. The previous version stays installed and can be chosen again in Xray Version." = "Используется со следующего подключения. Предыдущая версия остаётся установленной, её можно снова выбрать в меню Xray.";

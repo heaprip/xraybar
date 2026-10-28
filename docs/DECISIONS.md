@@ -775,3 +775,16 @@ explanation; the alert recommends Always Allow.
 team's access group instead of each build's signature. Not acceptable: an item any app may read.
 → The menu bar mark (D53) is drawn faint rather than outlined when not connected: the author
 found the outlines odd at menu bar size; at 18 points they blur into a mesh.
+
+## D56. Tested Xray 26.10.21; Check for Newer Versions offers only the newest (2026-10-29)
+
+v26.10.21 is the newest Xray release, and the first in a while not marked as a pre-release.
+Checked before pinning: the SHA-256 of both macOS zips from an own download equals the release's
+`.dgst` and GitHub's digest of the asset (arm64 `926cc55f…`, x86_64 `8e5169b4…`); the binary
+accepts XrayBar's configs (every v2rayN routing set; Hysteria 2 with port hopping, salamander and
+a pin); Hysteria 2 traffic passed through it on the Mac (SOCKS) and on the author's phone.
+→ `Assets.testedXray` is v26.10.21 with those hashes. Earlier versions stay installable.
+→ *Check for Newer Versions…* showed a pop-up list of versions in its alert. On macOS 27 the
+pop-up did not open (the menu bar menu was still showing; the author could only Cancel). It now
+offers only the newest release, and only when it is newer than every installed version: two
+buttons, no list. Older versions were rarely the point; the tested one has its own menu item.
