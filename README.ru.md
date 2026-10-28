@@ -166,6 +166,7 @@ cp -R build/XrayBar.app /Applications/       # и запускайте из /App
    ```sh
    sudo rm -rf "/Library/Application Support/XrayBar" /var/db/xraybar  # установленный Xray, сохранённый DNS
    rm -rf ~/Library/Application\ Support/XrayBar                       # серверы, наборы правил, данные
+   rm -rf ~/Library/Caches/io.github.heaprip.xraybar                   # кэш, который ведёт macOS
    sudo pkgutil --forget io.github.heaprip.xraybar                      # если ставили из .pkg
    ```
    и запись *XrayBar server credentials* в связке ключей («Связка ключей»). `/var/run/xraybar`

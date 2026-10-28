@@ -729,7 +729,10 @@ in plain sight), with a confirmation. Refused while connected or while DNS still
 fixed paths `/Library/Application Support/XrayBar` (Xray versions), `/var/run/xraybar` and
 `/var/db/xraybar`. It checks again that no session runs and no DNS override is saved. One
 administrator prompt. Then the app removes `~/Library/Application Support/XrayBar`, its keychain
-item and its login item, and quits; the next launch is a first launch.
+item and its login item, and quits; the next launch is a first launch. Also removed (found after
+the first live reset): `~/Library/Caches/io.github.heaprip.xraybar`, which macOS creates for
+Vision's QR detection, and the app's defaults domain should macOS ever write one. Connect at
+Launch shows as on after a reset: that is its default (D34), not a leftover.
 → Not removed: XrayBar.app (dragged to the Trash, as any app), the `.pkg` receipt (README), and
 anything of v2rayN's.
 

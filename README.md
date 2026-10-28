@@ -161,6 +161,7 @@ keychain item, then quits), and delete XrayBar from /Applications. By hand:
    ```sh
    sudo rm -rf "/Library/Application Support/XrayBar" /var/db/xraybar  # installed Xray, saved DNS
    rm -rf ~/Library/Application\ Support/XrayBar                       # servers, routing sets, data
+   rm -rf ~/Library/Caches/io.github.heaprip.xraybar                   # a cache macOS keeps
    sudo pkgutil --forget io.github.heaprip.xraybar                      # if installed from the .pkg
    ```
    and the keychain item *XrayBar server credentials* (Keychain Access). `/var/run/xraybar` is

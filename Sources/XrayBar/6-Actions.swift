@@ -434,8 +434,8 @@ final class AppModel {
     }
 
     /// Removes everything XrayBar keeps (D52): root's part with one administrator prompt (helper,
-    /// Xray versions, run files), then the data folder, the keychain item and the login item, and
-    /// quits. The app itself and v2rayN are left alone.
+    /// Xray versions, run files), then the data folder, the keychain item, the login item and
+    /// what macOS keeps for the app (cache, defaults), and quits. The app itself and v2rayN are left alone.
     func resetAll() {
         guard Session.runningPID() == nil, !Session.needsRestore else {
             return alert("Disconnect first", "Disconnect, or use Restore Network Settings, then reset.")
@@ -460,6 +460,12 @@ final class AppModel {
             try? await SMAppService.mainApp.unregister()
             Keychain.delete()
             try? FileManager.default.removeItem(at: Store.dir)
+            // What macOS keeps for the app: a cache (Vision's, from QR import) and, if ever written, defaults.
+            if let id = Bundle.main.bundleIdentifier {
+                let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+                caches.forEach { try? FileManager.default.removeItem(at: $0.appendingPathComponent(id)) }
+                UserDefaults.standard.removePersistentDomain(forName: id)
+            }
             NSApp.terminate(nil)
         }
     }

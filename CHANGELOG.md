@@ -14,8 +14,8 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 - After an update, XrayBar explains macOS's keychain prompt before it appears: what its one
   item holds, that nothing else is read, and to choose Always Allow (D55).
 - *Diagnostics › Reset XrayBar…* (hold Option): removes everything XrayBar keeps (servers,
-  settings, routing data, Xray versions, the helper, the keychain item) with one password, then
-  quits (D52).
+  settings, routing data, Xray versions, the helper, the keychain item, the login item, and the
+  cache macOS keeps for the app) with one password, then quits (D52).
 - README: why XrayBar exists, "Don't trust, verify" near the top, how to give feedback;
   positioned as a client built on Xray-core rather than a client for its TUN.
 
