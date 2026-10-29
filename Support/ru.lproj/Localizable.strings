@@ -15,6 +15,8 @@
 "Remove “%@”…" = "Удалить «%@»…";
 "Import Link or QR Code from Clipboard" = "Импорт ссылки или QR-кода из буфера обмена";
 "Import from v2rayN…" = "Импорт из v2rayN…";
+"Update Servers from Subscription" = "Обновить серверы из подписки";
+"Forget Subscription" = "Забыть подписку";
 "Share Server…" = "Поделиться сервером…";
 "Copy Server Link" = "Скопировать ссылку на сервер";
 "Version" = "Версия";
@@ -156,3 +158,9 @@
 "Reset" = "Сбросить";
 "Disconnect, or use Restore Network Settings, then reset." = "Отключитесь или восстановите сетевые настройки, затем повторите сброс.";
 "Could not reset" = "Не удалось выполнить сброс";
+
+/* Subscription (D59) */
+"Servers updated from the subscription" = "Серверы обновлены из подписки";
+"Subscription update failed" = "Не удалось обновить подписку";
+"It has no VLESS or Hysteria 2 server XrayBar can use. Your servers were not changed." = "В ней нет серверов VLESS или Hysteria 2, которые XrayBar может использовать. Ваши серверы не изменены.";
+"A subscription address must start with https://" = "Адрес подписки должен начинаться с https://";

@@ -820,3 +820,26 @@ errors ("read/write on closed pipe"). Xray reports why an outbound failed ("fail
 outbound traffic > …") and its DNS answers at the info level, which Detailed Log (warning) hid.
 → Detailed Log is `info` plus the access log. Still off by default; the log is readable only
 by admin users (`/var/run/xraybar/xray.log`, D38) and cleared at restart.
+
+## D59. One subscription, updated on request (2026-10-29)
+
+PRINCIPLES excluded subscriptions "unless a concrete need proves otherwise". The need came:
+servers in Russia lose their address to blocks and change keys after leaks, and every client
+but XrayBar picked up the new server from the author's subscription, while XrayBar needed the
+link pasted again. The author's subscription serves a JSON array of full Xray configs with
+routing (for v2rayNG and Streisand); v2rayN-style subscriptions serve share links.
+→ One subscription. Importing an `https://` address (clipboard, as a link) stores it and
+fetches it; *Update Servers from Subscription* fetches it again, only when chosen (Quiet: no
+background refresh). Accepted bodies: share links one per line, plain or base64 (URL-safe,
+unpadded too), or full Xray configs (array or one object), from which only the proxy outbound
+is read (tag `proxy`, else the first VLESS/Hysteria one) — the inverse of 4-Config, tested as
+a round trip; a config's routing is ignored, XrayBar's routing sets stay in charge. Unusable
+entries are skipped, not errors. An update replaces the servers marked as from the
+subscription (`Profile.subscription`, optional) and keeps hand-added ones; a server keeps its
+id when its name is unchanged, so the selection survives a key change, and a changed selected
+server offers Reconnect. The address is a credential (its path is the secret), so it is
+stored in the keychain item with the server credentials and blanked in library.json. User
+agent `XrayBar`: some subscription servers refuse link-preview bots and curl. *Forget
+Subscription* (Option) drops the address and keeps the servers. Failover between a
+subscription's servers (Xray observatory + balancer) is not done yet: there is only one server.
+

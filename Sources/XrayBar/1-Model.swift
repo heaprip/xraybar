@@ -25,6 +25,8 @@ struct Profile: Codable, Equatable, Identifiable, Sendable {
     var obfsPassword: String?    // hysteria2 salamander
     var ports: String?           // hysteria2 port hopping, "20000-30000" or "443,5000-6000"
     var pinSHA256: String?       // hysteria2: the certificate's SHA-256, checked besides the CA
+    /// From the subscription: replaced when it is updated (D59). nil: added by hand.
+    var subscription: Bool?
 }
 
 /// One routing rule, in v2rayN's `RulesItem` shape so v2rayN routing sets and
@@ -81,6 +83,9 @@ struct Settings: Codable, Equatable, Sendable {
     var routeExclusions: [String]?
     /// Connect to the last used server when XrayBar starts (nil means on).
     var connectAtLaunch: Bool?
+    /// The subscription's https:// address (D59). Its path is a secret, so it lives in the
+    /// keychain with the server credentials and is empty in library.json.
+    var subscription: String?
 }
 
 /// Everything persisted, in one file.

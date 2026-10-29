@@ -505,6 +505,9 @@ final class AppModel {
 
     private func importLinks(_ lines: [String]) {
         let links = lines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if let url = links.first(where: { $0.hasPrefix("https://") }) {   // a subscription (D59)
+            return updateSubscription(from: url)
+        }
         do {
             let profiles = try links.map(Import.profile(fromLink:))
             guard !profiles.isEmpty else { return alert("Nothing to import", "Copy a vless:// link first.") }
@@ -520,6 +523,50 @@ final class AppModel {
         } catch {
             alert("Import failed", error.localizedDescription)
         }
+    }
+
+    /// Downloads the subscription and replaces the servers it gave last time (D59); servers added
+    /// by hand stay. A server keeps its identity, and so the selection, when its name is unchanged.
+    /// A newly imported address is kept only once it has given servers.
+    func updateSubscription() { library.settings.subscription.map(updateSubscription(from:)) }
+
+    private func updateSubscription(from url: String) {
+        updating = true
+        Task {
+            do {
+                var fresh = Import.subscription(try await Assets.subscription(url))
+                updating = false
+                guard !fresh.isEmpty else {
+                    return alert("Subscription update failed", "It has no VLESS or Hysteria 2 server XrayBar can use. Your servers were not changed.")
+                }
+                let old = library.profiles.filter { $0.subscription == true }
+                let before = library.profile
+                for i in fresh.indices {
+                    fresh[i].subscription = true
+                    if let same = old.first(where: { $0.name == fresh[i].name }) { fresh[i].id = same.id }
+                }
+                library.settings.subscription = url
+                library.profiles.removeAll { $0.subscription == true }
+                library.profiles += fresh
+                if library.profiles.first(where: { $0.id == library.selectedProfile }) == nil {
+                    library.selectedProfile = fresh.first?.id
+                }
+                save()
+                if session.state == .connected, library.profile != before { changedWhileConnected = true }
+                alert("Servers updated from the subscription",
+                      fresh.map { "\($0.name) — \($0.address):\($0.port)" }.joined(separator: "\n"))
+            } catch {
+                updating = false
+                alert("Subscription update failed", error.localizedDescription)
+            }
+        }
+    }
+
+    /// Option-alternate of Update Servers: forgets the address; its servers stay, as if added by hand.
+    func forgetSubscription() {
+        library.settings.subscription = nil
+        for i in library.profiles.indices { library.profiles[i].subscription = nil }
+        save()
     }
 
     func importV2rayN() {

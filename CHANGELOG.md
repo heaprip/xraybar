@@ -5,6 +5,10 @@ Decisions behind the changes: [docs/DECISIONS.md](docs/DECISIONS.md) (D-numbers 
 
 ## Unreleased
 
+- One subscription: import its `https://` address like a link; *Update Servers from
+  Subscription* fetches it on request and replaces the servers it gave last time. Share links
+  (plain or base64) or a JSON array of full Xray configs (only the server is used). The address
+  is kept in the keychain (D59).
 - *Detailed Log* shows Xray's info level: why a connection to the server failed, DNS answers (D58).
 - Fix: Hysteria 2 (and any server given by name) passed no traffic through the tunnel: Xray's
   lookup of the server's name went into the tunnel. XrayBar now resolves the name before

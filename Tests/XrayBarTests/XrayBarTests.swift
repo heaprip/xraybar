@@ -34,6 +34,40 @@ import Testing
         #expect(throws: ImportError.self) { try Import.profile(fromLink: "hysteria2://pw@h.example:443?obfs=gecko") }
     }
 
+    /// A full-config subscription (D59) gives back the profile 4-Config wrote; routing is ignored.
+    @Test func subscriptionOfFullConfigs() throws {
+        var hy = try Import.profile(fromLink: "hysteria2://pw@hy.example.com:443?sni=s.example&obfs=salamander&obfs-password=o&mport=5000-6000&pinSHA256=ab#Hy")
+        var vless = try Import.profile(fromLink:
+            "vless://11111111-2222-3333-4444-555555555555@example.com:443?type=tcp&security=reality&sni=www.apple.com&fp=firefox&pbk=PUB&sid=ab12&flow=xtls-rprx-vision#V")
+        let configs: [[String: Any]] = [hy, vless].map { p in
+            ["remarks": p.name, "routing": ["rules": []] as [String: Any],
+             "outbounds": [["tag": "direct", "protocol": "freedom"], XrayConfig.proxyOutbound(p)]]
+        }
+        let body = String(decoding: try JSONSerialization.data(withJSONObject: configs), as: UTF8.self)
+        let back = Import.subscription(body)
+        try #require(back.count == 2)
+        hy.id = back[0].id; vless.id = back[1].id
+        hy.ports = "5000-6000"   // written as udpHop, read back the same
+        #expect(back[0] == hy && back[1] == vless)
+        // A gecko-obfuscated Hysteria server or a ws transport is skipped, not an error.
+        var gecko = XrayConfig.proxyOutbound(hy)
+        var stream = gecko["streamSettings"] as! [String: Any]
+        stream["finalmask"] = ["udp": [["type": "gecko"]]]
+        gecko["streamSettings"] = stream
+        let skipped = String(decoding: try JSONSerialization.data(withJSONObject: [["outbounds": [gecko]]]), as: UTF8.self)
+        #expect(Import.subscription(skipped).isEmpty)
+    }
+
+    @Test func subscriptionOfLinks() {
+        let links = "vless://u@a.example:443?type=tcp&security=tls#A\nvmess://skipped\nhysteria2://pw@b.example:443#B\n"
+        let plain = Import.subscription(links)
+        #expect(plain.map(\.name) == ["A", "B"])
+        let base64 = Data(links.utf8).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "=", with: "")
+        #expect(Import.subscription(base64).map(\.name) == ["A", "B"])
+        #expect(Import.subscription("<html>not a subscription</html>").isEmpty)
+    }
+
     @Test func v2rayNRuleSetDecodes() throws {
         let json = #"[{"Id":"1","OutboundTag":"direct","Domain":["geosite:private"],"Ip":null,"Enabled":true,"RuleType":null,"Remarks":"LAN"}]"#
         let rules = try JSONDecoder().decode([Rule].self, from: Data(json.utf8))

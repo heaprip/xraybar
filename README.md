@@ -103,7 +103,9 @@ For development, `swift run` works too (English only: translations need the app 
 
 1. **Add a server.** *Import Link or QR Code from Clipboard*: copy a `vless://…` or
    `hysteria2://…` link, or press ⌘⇧⌃4 and select a QR code (the screenshot goes to the
-   clipboard). Or *Import from v2rayN…* (read-only, see below).
+   clipboard). Or *Import from v2rayN…* (read-only, see below). Or a subscription: copy its
+   `https://…` address and import it the same way; *Update Servers from Subscription* fetches
+   it again when you choose it (never by itself).
 2. **Get Xray and routing data.** *Xray › Download v26.10.21* and *Update Routing Data*
    (checksum-verified). Installing Xray asks for your password once: it goes into a root-owned
    folder, the only place XrayBar runs it from as root. With v2rayN installed, *Copy Xray
@@ -141,7 +143,8 @@ except the local network and ads).
 | Share Server… | The selected server as a QR code |
 | Xray › | Versions side by side; a new version's first connection is checked, with a one-click switch back. Routing data source and update. *Exclude from Tunnel…* for networks that must bypass Xray |
 | Diagnostics › | Log, detailed log, data folder, uninstall the helper. XrayBar's own log: Console.app, subsystem `io.github.heaprip.xraybar` |
-| **Option** held | *Remove* a server or routing set · *Copy Server Link* · technical details under the status line · *Diagnostics › Reset XrayBar…* |
+| Update Servers from Subscription | Shown once a subscription is imported: fetches it and replaces the servers it gave last time (servers added by hand stay). Share links (plain or base64) or a JSON array of full Xray configs, of which only the server is used; routing stays with your routing set |
+| **Option** held | *Remove* a server or routing set · *Copy Server Link* · *Forget Subscription* · technical details under the status line · *Diagnostics › Reset XrayBar…* |
 
 Only short, readable code runs as root: [the session script](Sources/XrayBar/Resources/xraybar-session.sh),
 [the install script](Sources/XrayBar/Resources/xraybar-install.sh) and

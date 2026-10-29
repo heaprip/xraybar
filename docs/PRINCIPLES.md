@@ -17,8 +17,9 @@ kitchen sinks or look and behave nothing like a Mac app.
 
 - Not a VPN implementation. Xray is the trusted networking component; XrayBar only
   writes its config and supervises the process.
-- Not a v2rayN clone. No subscriptions, speed tests, balancers, proxy chains,
-  multiple cores, system-proxy mode or theming, unless a concrete need proves otherwise.
+- Not a v2rayN clone. No speed tests, balancers, proxy chains, multiple cores,
+  system-proxy mode or theming, unless a concrete need proves otherwise. One subscription
+  is supported since such a need appeared: servers that move or change keys (D59).
 - Not a NetworkExtension app. No App Store, no entitlements, no provisioning.
 
 ## Product principles

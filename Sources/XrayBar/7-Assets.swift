@@ -1,7 +1,7 @@
 // 7. Assets — XrayBar's own Xray versions and routing data (geoip.dat, geosite.dat).
 //
 // This is the ONLY code in the app that uses the network. It runs when the user asks
-// (download a version, check for versions, update routing data), plus one connectivity probe
+// (download a version, check for versions, update routing data, update the subscription), plus one connectivity probe
 // right after connecting with an Xray version that has not proven itself yet (D23).
 // Nothing is used unless it passes its check:
 // - Xray: the version tested with XrayBar is checked against a SHA-256 pinned right here (D22);
@@ -155,6 +155,17 @@ enum Assets {
     static func field(_ key: String, in text: String) -> String {
         text.split(separator: "\n").first { $0.hasPrefix(key) }
             .map { $0.dropFirst(key.count).trimmingCharacters(in: .whitespaces) } ?? ""
+    }
+
+    /// A subscription's body (D59), fetched only when the user asks. The address itself is the
+    /// credential; errors name it only as "subscription".
+    static func subscription(_ url: String) async throws -> String {
+        guard let u = URL(string: url), u.scheme == "https" else { throw failure(L("A subscription address must start with https://")) }
+        var request = URLRequest(url: u)
+        request.setValue("XrayBar", forHTTPHeaderField: "User-Agent")
+        let (data, response) = try await retrying { try await session.data(for: request) }
+        try check(response, "subscription")
+        return String(decoding: data, as: UTF8.self)
     }
 
     private static func download(_ url: String, to destination: URL) async throws -> URL {

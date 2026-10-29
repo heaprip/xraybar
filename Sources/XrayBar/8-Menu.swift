@@ -46,6 +46,14 @@ struct AppMenu: View {
         Divider()
         Button("Import Link or QR Code from Clipboard", systemImage: "doc.on.clipboard", action: model.importClipboard)
         Button("Import from v2rayN…", systemImage: "square.and.arrow.down", action: model.importV2rayN)
+        if model.library.settings.subscription != nil {   // D59
+            Button("Update Servers from Subscription", systemImage: "arrow.triangle.2.circlepath",
+                   action: model.updateSubscription)
+                .modifierKeyAlternate(.option) {
+                    Button("Forget Subscription", systemImage: "xmark.circle", action: model.forgetSubscription)
+                }
+                .disabled(model.updating)
+        }
         Button("Share Server…", systemImage: "qrcode", action: model.shareServer)
             .modifierKeyAlternate(.option) {
                 Button("Copy Server Link", systemImage: "link", action: model.copyServerLink)

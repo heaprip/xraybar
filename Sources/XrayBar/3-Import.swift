@@ -109,6 +109,72 @@ enum Import {
         return c.string ?? ""
     }
 
+    // MARK: Subscriptions (D59)
+
+    /// A subscription's body: share links, one per line, plain or base64 (as v2rayN and v2rayNG
+    /// serve them), or a JSON array of full Xray configs, of which only the proxy outbound is
+    /// used: routing stays with XrayBar's routing sets. What XrayBar cannot use is skipped.
+    static func subscription(_ body: String) -> [Profile] {
+        let text = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let json = try? JSONSerialization.jsonObject(with: Data(text.utf8)) {
+            let configs = json as? [[String: Any]] ?? (json as? [String: Any]).map { [$0] } ?? []
+            return configs.compactMap(profile(fromConfig:))
+        }
+        var base64 = text.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+            .filter { !$0.isWhitespace }
+        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+        let lines = Data(base64Encoded: base64).flatMap { String(data: $0, encoding: .utf8) } ?? text
+        return lines.split(whereSeparator: \.isNewline).compactMap { try? profile(fromLink: String($0)) }
+    }
+
+    /// The proxy outbound of a full Xray config (tag "proxy", else the first VLESS or Hysteria
+    /// one), read back into a profile: the inverse of 4-Config's proxyOutbound.
+    static func profile(fromConfig config: [String: Any]) -> Profile? {
+        let outbounds = config["outbounds"] as? [[String: Any]] ?? []
+        guard let o = outbounds.first(where: { $0["tag"] as? String == "proxy" })
+                ?? outbounds.first(where: { ["vless", "hysteria"].contains($0["protocol"] as? String) })
+        else { return nil }
+        let dict = { (d: Any?, key: String) in (d as? [String: Any])?[key] as? [String: Any] ?? [:] }
+        let int = { (v: Any?) in v as? Int ?? (v as? String).flatMap { Int($0) } }
+        let settings = o["settings"] as? [String: Any] ?? [:]
+        let stream = o["streamSettings"] as? [String: Any] ?? [:]
+        let name = config["remarks"] as? String
+
+        switch o["protocol"] as? String {
+        case "hysteria":
+            let tls = dict(stream, "tlsSettings"), finalmask = dict(stream, "finalmask")
+            let masks = finalmask["udp"] as? [[String: Any]] ?? []
+            guard let address = settings["address"] as? String, let port = int(settings["port"]),
+                  let auth = dict(stream, "hysteriaSettings")["auth"] as? String,
+                  masks.allSatisfy({ $0["type"] as? String == "salamander" })   // gecko: not supported (D51)
+            else { return nil }
+            return Profile(name: name ?? address, address: address, port: port, uuid: auth,
+                           network: "hysteria", security: "tls", sni: tls["serverName"] as? String ?? "",
+                           fingerprint: "", kind: "hysteria2",
+                           obfsPassword: masks.first.flatMap { dict($0, "settings")["password"] as? String },
+                           ports: dict(finalmask["quicParams"], "udpHop")["ports"] as? String,
+                           pinSHA256: tls["pinnedPeerCertSha256"] as? String)
+        case "vless":
+            // Older configs nest the server in vnext[0].users[0]; newer ones put it in settings.
+            let server = (settings["vnext"] as? [[String: Any]])?.first ?? settings
+            let user = (server["users"] as? [[String: Any]])?.first ?? server
+            let network = (stream["network"] as? String).map { $0 == "tcp" ? "raw" : $0 } ?? "raw"
+            let security = stream["security"] as? String ?? "none"
+            let reality = dict(stream, "realitySettings"), tls = dict(stream, "tlsSettings")
+            let s = security == "reality" ? reality : tls
+            guard network == "raw", let address = server["address"] as? String, let port = int(server["port"]),
+                  let id = user["id"] as? String else { return nil }
+            return Profile(name: name ?? address, address: address, port: port, uuid: id,
+                           flow: user["flow"] as? String ?? "",
+                           encryption: user["encryption"] as? String ?? "none", network: network, security: security,
+                           sni: s["serverName"] as? String ?? "", fingerprint: s["fingerprint"] as? String ?? "chrome",
+                           publicKey: reality["password"] as? String ?? reality["publicKey"] as? String ?? "",
+                           shortId: reality["shortId"] as? String ?? "", spiderX: reality["spiderX"] as? String ?? "")
+        default:
+            return nil
+        }
+    }
+
     // MARK: QR codes
 
     /// Text of every QR code found in an image (Vision, on-device).

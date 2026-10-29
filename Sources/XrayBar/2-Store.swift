@@ -36,21 +36,27 @@ enum Store {
             try? FileManager.default.moveItem(at: libraryFile, to: aside)
             return Library()
         }
-        let inFile = library.profiles.contains { !$0.uuid.isEmpty }
+        let inFile = library.profiles.contains { !$0.uuid.isEmpty } || library.settings.subscription != nil
         for i in library.profiles.indices where library.profiles[i].uuid.isEmpty {
             library.profiles[i].uuid = inKeychain?[library.profiles[i].id.uuidString] ?? ""
         }
+        if library.settings.subscription == nil { library.settings.subscription = inKeychain?[subscriptionKey] }
         if inFile && inKeychain != nil { try? save(library) }   // moves them out of the file
         return library
     }
 
+    /// The subscription address's entry in the keychain item, beside the profile ids (D59).
+    private static let subscriptionKey = "subscription"
+
     /// library.json without the VLESS ids once the keychain has taken them.
     @MainActor static func save(_ library: Library) throws {
         var file = library
-        let secrets = Dictionary(library.profiles.map { ($0.id.uuidString, $0.uuid) }) { a, _ in a }
+        var secrets = Dictionary(library.profiles.map { ($0.id.uuidString, $0.uuid) }) { a, _ in a }
+        secrets[subscriptionKey] = library.settings.subscription
         if inKeychain != nil, secrets == inKeychain || Keychain.write(secrets) {
             inKeychain = secrets
             for i in file.profiles.indices { file.profiles[i].uuid = "" }
+            file.settings.subscription = nil
         } else if inKeychain != nil {
             appLog.error("Keychain not writable: server ids kept in library.json")
         }
