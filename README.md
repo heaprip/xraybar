@@ -20,7 +20,7 @@ all traffic through one process with nothing else in between.
 
 > Status: early; used daily by the author. Not verified yet: IPv6 through the tunnel on a real
 > IPv6 network, the DNS override across a switch between network services (Wi-Fi to Ethernet).
-> Not done: VLESS transports other than raw (ws, grpc, xhttp…); Hysteria 2's gecko obfuscation and realm.
+> Not done: other VLESS transports (ws, grpc, xhttp…); Hysteria 2's gecko obfuscation and realm.
 
 ## Why
 
@@ -210,3 +210,5 @@ MIT, see [LICENSE](LICENSE). Behaviour and formats are modelled on
 program under MPL-2.0. Routing data:
 [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat),
 [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat).
+
+Experimental direct QUIC REALITY uses VLESS over QUIC streams in one Xray process, with no HTTP layer. Import a `vless://` link with `type=quicreality`, `security=reality`, no VLESS flow and optional `alpn=xray-quic-v1`. It requires a specifically verified patched Xray, installable from Xray Version; the previous version remains available for rollback. Full-config imports with custom QUIC parameters or enabled Mux are not supported by the app; this does not limit the core’s Mux support. The native TUN path has not yet been tested with this transport.

@@ -3,6 +3,72 @@ import Testing
 @testable import XrayBar
 
 @Suite struct ImportTests {
+    @Test func directQUICReality() throws {
+        let id = "11111111-2222-3333-4444-555555555555"
+        let link = "vless://\(id)@example.com:443?type=quicreality&security=reality&alpn=xray-quic-v1&sni=example.com&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA#Direct"
+        let p = try Import.profile(fromLink: link)
+        #expect(p.network == "quicreality" && p.flow.isEmpty)
+        var linked = try Import.profile(fromLink: Import.link(for: p)); linked.id = p.id
+        #expect(linked == p)
+        let outbound = XrayConfig.proxyOutbound(p)
+        let stream = try #require(outbound["streamSettings"] as? [String: Any])
+        #expect(stream["network"] as? String == "quicreality")
+        #expect(stream["xhttpSettings"] == nil && stream["splithttpSettings"] == nil)
+        #expect((stream["realitySettings"] as? [String: Any])?["alpn"] == nil)
+        var fromJSON = try #require(Import.profile(fromConfig: ["remarks": "Direct", "outbounds": [outbound]])); fromJSON.id = p.id
+        #expect(fromJSON == p)
+        #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=reality&alpn=h3") }
+        #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=reality&flow=xtls-rprx-vision") }
+        #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=tls") }
+        #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=reality&path=%2Ffoo") }
+        var unsupported = outbound
+        var unsupportedStream = stream; unsupportedStream["finalmask"] = ["quicParams": ["congestion": "bbr"]]
+        unsupported["streamSettings"] = unsupportedStream
+        #expect(Import.profile(fromConfig: ["outbounds": [unsupported]]) == nil)
+        unsupported = outbound; unsupported["mux"] = ["enabled": true, "concurrency": 8]
+        #expect(Import.profile(fromConfig: ["outbounds": [unsupported]]) == nil)
+        unsupported["mux"] = ["enabled": false]
+        #expect(Import.profile(fromConfig: ["outbounds": [unsupported]]) != nil)
+        var bad = outbound
+        var badStream = stream
+        var reality = try #require(stream["realitySettings"] as? [String: Any])
+        reality["alpn"] = "h3"; badStream["realitySettings"] = reality; bad["streamSettings"] = badStream
+        #expect(Import.profile(fromConfig: ["outbounds": [bad]]) == nil)
+        reality["alpn"] = "xray-quic-v1"; reality["masterKeyLog"] = "/tmp/unsafe"
+        badStream["realitySettings"] = reality; bad["streamSettings"] = badStream
+        let sanitized = try #require(Import.profile(fromConfig: ["outbounds": [bad]]))
+        let sanitizedStream = try #require(XrayConfig.proxyOutbound(sanitized)["streamSettings"] as? [String: Any])
+        #expect((sanitizedStream["realitySettings"] as? [String: Any])?["masterKeyLog"] == nil)
+        var settings = try #require(outbound["settings"] as? [String: Any])
+        var servers = try #require(settings["vnext"] as? [[String: Any]])
+        var users = try #require(servers[0]["users"] as? [[String: Any]])
+        users[0]["flow"] = "xtls-rprx-vision"; servers[0]["users"] = users; settings["vnext"] = servers
+        bad = outbound; bad["settings"] = settings
+        #expect(Import.profile(fromConfig: ["outbounds": [bad]]) == nil)
+        let old = """
+        {"name":"Old","address":"example.com","port":443,"uuid":"u","id":"00000000-0000-0000-0000-000000000001","flow":"","encryption":"none","network":"raw","security":"reality","sni":"","fingerprint":"chrome","publicKey":"","shortId":"","spiderX":""}
+        """
+        #expect(try JSONDecoder().decode(Profile.self, from: Data(old.utf8)).network == "raw")
+        let hashFile = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: hashFile) }
+        try Data("test".utf8).write(to: hashFile)
+        let hash = try Assets.sha256(hashFile)
+        #expect(Assets.matchesDirectQUIC(hashFile, expected: hash))
+        #expect(!Assets.matchesDirectQUIC(hashFile, expected: String(repeating: "0", count: 64)))
+        #expect(!Assets.matchesDirectQUIC(hashFile, expected: nil))
+        if let path = ProcessInfo.processInfo.environment["XRAY_QUIC_TEST_BINARY"] {
+            let config = XrayConfig.validationCopy(XrayConfig.make(profile: p, routing: RoutingSet(name: "Test", rules: []), settings: Settings()))
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+            defer { try? FileManager.default.removeItem(at: file) }
+            try XrayConfig.data(config).write(to: file)
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: path)
+            process.arguments = ["run", "-test", "-config", file.path]
+            try process.run(); process.waitUntilExit()
+            #expect(process.terminationStatus == 0)
+        }
+    }
+
     @Test func vlessRealityLink() throws {
         let p = try Import.profile(fromLink:
             "vless://11111111-2222-3333-4444-555555555555@example.com:443?type=tcp&security=reality&sni=www.apple.com&fp=chrome&pbk=PUBKEY&sid=ab12&flow=xtls-rprx-vision#My%20Server")

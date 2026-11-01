@@ -22,6 +22,14 @@ enum Assets {
     static let staging = Store.dir.appendingPathComponent("download")
     /// The tag of the copy of v2rayN's xray (Settings.v2rayNXray) in the store.
     static let v2rayNTag = "v2rayN"
+    // Experimental Xray b7a8eb90, macOS arm64. This hash identifies this particular build.
+    static let directQUICTag = "direct-quic-b7a8eb90"
+    static let directQUICSHA256: String? = "380eb09dab2848f834aeec9db07cdd2c27e7f107a66f76a31dbdcc0df5e244e1"
+
+    static func matchesDirectQUIC(_ file: URL, expected: String? = directQUICSHA256) -> Bool {
+        guard let expected else { return false }
+        return (try? sha256(file)) == expected
+    }
 
     enum DataSource: String, Codable, CaseIterable, Sendable {
         case runetfreedom, loyalsoldier

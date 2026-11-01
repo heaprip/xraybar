@@ -20,7 +20,7 @@ XrayBar хранит ваши серверы и подключается чер�
 
 > Статус: ранний; автор пользуется им каждый день. Ещё не проверено: IPv6 через туннель в
 > реальной IPv6-сети, перенос DNS при смене сетевого сервиса (Wi-Fi на Ethernet).
-> Не сделано: транспорты VLESS кроме raw (ws, grpc, xhttp…); обфускация gecko и realm у Hysteria 2.
+> Не сделано: другие транспорты VLESS (ws, grpc, xhttp…); обфускация gecko и realm у Hysteria 2.
 
 ## Зачем
 
@@ -214,3 +214,5 @@ MIT, см. [LICENSE](LICENSE). Поведение и форматы повтор
 программа под MPL-2.0. Данные маршрутизации:
 [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat),
 [Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat).
+
+Экспериментальный прямой QUIC REALITY передаёт VLESS через потоки QUIC одним процессом Xray, без слоя HTTP. Импортируйте ссылку `vless://` с `type=quicreality`, `security=reality`, пустым VLESS flow и необязательным `alpn=xray-quic-v1`. Нужна проверенная изменённая сборка Xray, устанавливаемая через меню версии Xray; прежняя версия остаётся доступной для отката. Приложение не импортирует полные конфигурации с дополнительными параметрами QUIC или включённым Mux; поддержка Mux самим ядром от этого не зависит. Работа этого транспорта через native TUN пока не проверена.

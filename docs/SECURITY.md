@@ -15,7 +15,7 @@ produced the file; it does not prove the code is benign, reading it does).
 Don't trust the author's word about the source: it is small enough to read, and
 `scripts/audit.sh` plus `docs/AUDIT.md` let you (or an AI model you run) check it.
 Don't trust downloads: Xray-core and `.dat` files are verified against upstream checksums.
-Xray-core itself is trusted as the upstream XTLS project; XrayBar does not modify it.
+Ordinary releases are upstream XTLS builds; the optional experimental build below is patched.
 
 ## What the app does
 
@@ -94,3 +94,5 @@ Open at Login uses a standard login item (System Settings › General › Login 
 A vulnerability: report it privately with *Report a vulnerability* on the repository's
 [Security tab](https://github.com/heaprip/xraybar/security/advisories/new), not in an issue.
 Anything else: open an issue.
+
+The optional experimental direct QUIC REALITY binary is patched Xray commit `b7a8eb90235ee1fdfc304beb0debb7def19172b1`, with quic-go `21b40afc4eff` and REALITY `e43f69bc3971` forks; macOS arm64 SHA-256 `380eb09dab2848f834aeec9db07cdd2c27e7f107a66f76a31dbdcc0df5e244e1`. It is experimental and has not had a complete audit. XrayBar requires its pinned SHA-256 at installation and again when connecting; the existing installer verifies the root-owned copy. A hash identifies a build, not its trustworthiness. Imported profiles cannot set a REALITY key-log path.

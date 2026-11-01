@@ -81,3 +81,5 @@ For each item, answer yes/no with evidence:
 
 A list of findings (severity, file:line, what, why it matters), the checklist with
 answers, and a short statement of what was not verified.
+
+For experimental direct QUIC REALITY, verify the pinned binary hash, supported import fields, and connect-time hash check; imported profiles cannot supply a key-log path.

@@ -60,12 +60,24 @@ final class Session {
     /// `library.settings.xrayBinary` is the resolved xray from the root-owned store (AppModel).
     func connect(_ library: Library) {
         guard let profile = library.profile else { return fail("Add a profile first.") }
+        if profile.kind != "hysteria2" && profile.network != "raw" && profile.network != "quicreality" {
+            return fail("This server transport is not supported.")
+        }
+        if profile.network == "quicreality" && (profile.security != "reality" || !profile.flow.isEmpty) {
+            return fail("Direct QUIC requires REALITY and no VLESS flow.")
+        }
+        if profile.network == "quicreality" && profile.address.contains(":") {
+            return fail("Direct QUIC server addresses must be IPv4 or a hostname so the server can bypass the tunnel.")
+        }
         guard !profile.uuid.isEmpty else {
             return fail("The server's credentials are in your keychain, which XrayBar could not read. "
                         + "Quit and reopen XrayBar, then allow access when macOS asks.")
         }
         guard let xray = library.settings.xrayBinary else {
             return fail(String(format: L("No Xray installed yet. Choose Xray › Download %@, or Copy Xray from v2rayN."), Assets.testedXray))
+        }
+        if profile.network == "quicreality" && !Assets.matchesDirectQUIC(URL(fileURLWithPath: xray)) {
+            return fail("Direct QUIC REALITY requires the verified experimental Xray. Install and select it in Xray Version.")
         }
         if let other = Self.otherTunnel() {
             return fail(String(format: L("Another VPN or TUN (%@) already routes all traffic, for example v2rayN in TUN mode. "

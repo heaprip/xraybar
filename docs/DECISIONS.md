@@ -843,3 +843,8 @@ agent `XrayBar`: some subscription servers refuse link-preview bots and curl. *F
 Subscription* (Option) drops the address and keeps the servers. Failover between a
 subscription's servers (Xray observatory + balancer) is not done yet: there is only one server.
 
+
+
+## D60. Direct QUIC REALITY requires a verified experimental core (2026-11-01)
+
+VLESS over direct QUIC streams uses a patched Xray transport and fixed ALPN `xray-quic-v1`; it has no HTTP data layer. Reject VLESS flow and conflicting ALPN on import and require the pinned binary hash at install and connect. Existing root-store versions remain available for rollback. Do not import key-log paths. Native TUN remains unverified for this transport; the separate direct-routing issue remains open.

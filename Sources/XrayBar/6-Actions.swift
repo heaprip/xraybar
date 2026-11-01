@@ -287,6 +287,27 @@ final class AppModel {
         }
     }
 
+    func installDirectQUICXray() {
+        guard let expected = Assets.directQUICSHA256 else {
+            return alert("Could not install Xray", "The verified direct QUIC Xray build is not available yet.")
+        }
+        let panel = NSOpenPanel()
+        panel.message = L("Select the verified experimental direct QUIC REALITY Xray binary.")
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        NSApp.activate()
+        guard panel.runModal() == .OK, let binary = panel.url else { return }
+        Task {
+            do {
+                guard try Assets.sha256(binary) == expected else {
+                    return alert("Could not install Xray", "The selected binary does not match the expected experimental Xray SHA-256.")
+                }
+                guard try await installXray(Assets.directQUICTag, from: binary, expectedHash: expected) else { return }
+                alert("Experimental Xray installed", "It is selected for the next Connect. The previous version remains available in Xray Version.")
+            } catch { alert("Could not install Xray", error.localizedDescription) }
+        }
+    }
+
     /// v2rayN's xray, copied into the root-owned store: the session never runs it where it is.
     func copyV2rayNXray() {
         Task {
@@ -301,8 +322,8 @@ final class AppModel {
 
     /// Root copies the binary into its store and checks the copy against the hash taken here, so
     /// the session only ever runs a root-owned xray (D38). One administrator prompt; false if cancelled.
-    private func installXray(_ tag: String, from binary: URL) async throws -> Bool {
-        let hash = try Assets.sha256(binary)
+    private func installXray(_ tag: String, from binary: URL, expectedHash: String? = nil) async throws -> Bool {
+        let hash = try expectedHash ?? Assets.sha256(binary)
         do {
             try await session.runPrivileged(["--xray", tag, binary.path, hash], detached: false, script: "xraybar-install",
                                       prompt: String(format: L("XrayBar wants to install Xray %@."), Self.xrayName(tag)))

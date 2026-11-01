@@ -33,7 +33,7 @@ struct AppMenu: View {
 
         Section("Server") {
             if model.library.profiles.isEmpty { Text("No servers — import one below") }
-            choices(model.library.profiles.map { ($0.id, $0.name, $0.address) },
+            choices(model.library.profiles.map { ($0.id, $0.network == "quicreality" ? "\($0.name) — QUIC REALITY" : $0.name, $0.address) },
                     selected: model.library.profile?.id, more: "Other Servers",
                     select: model.selectProfile, remove: model.removeProfile)
         }
@@ -111,6 +111,7 @@ struct AppMenu: View {
             if model.v2rayNXrayFound {
                 Button("Copy Xray from v2rayN…", action: model.copyV2rayNXray)
             }
+            Button("Install Experimental Direct QUIC REALITY Xray…", action: model.installDirectQUICXray)
             Button("Check for Newer Versions…", systemImage: "arrow.down.circle", action: model.checkNewerXray)
                 .disabled(model.updating)
         }

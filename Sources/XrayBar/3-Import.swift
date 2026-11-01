@@ -20,7 +20,7 @@ enum Import {
     // MARK: Share links
 
     /// `vless://uuid@host:port?type=tcp&security=reality&sni=…&pbk=…&sid=…&fp=…&flow=…#name`
-    /// The de-facto VLESS share-link format (XTLS/Xray-core discussion #716); raw transport only.
+    /// VLESS share links: raw or the experimental direct QUIC REALITY transport.
     static func profile(fromLink link: String) throws -> Profile {
         let link = link.trimmingCharacters(in: .whitespacesAndNewlines)
         if link.hasPrefix("hysteria2://") || link.hasPrefix("hy2://") { return try hysteria2(link) }
@@ -31,7 +31,16 @@ enum Import {
         let q = Dictionary((url.queryItems ?? []).map { ($0.name, $0.value ?? "") },
                            uniquingKeysWith: { first, _ in first })
         let network = q["type"].map { $0 == "tcp" ? "raw" : $0 } ?? "raw"
-        guard network == "raw" else { throw ImportError.unsupported("transport \(network)") }
+        guard network == "raw" || network == "quicreality" else { throw ImportError.unsupported("transport \(network)") }
+        if network == "quicreality" {
+            guard q["security"] == "reality", (q["alpn"] ?? "").isEmpty || q["alpn"] == "xray-quic-v1",
+                  (q["flow"] ?? "").isEmpty else {
+                throw ImportError.unsupported(L("QUIC REALITY requires REALITY, ALPN xray-quic-v1 and no VLESS flow"))
+            }
+            guard ["host", "path", "mode", "extra"].allSatisfy({ q[$0] == nil }) else {
+                throw ImportError.unsupported(L("HTTP transport settings are not supported for direct QUIC"))
+            }
+        }
 
         return Profile(
             name: url.fragment?.removingPercentEncoding ?? host,
@@ -103,6 +112,7 @@ enum Import {
             ("type", p.network == "raw" ? "tcp" : p.network), ("encryption", p.encryption),
             ("security", p.security), ("sni", p.sni), ("fp", p.fingerprint), ("pbk", p.publicKey),
             ("sid", p.shortId), ("spx", p.spiderX), ("flow", p.flow),
+            ("alpn", p.network == "quicreality" ? "xray-quic-v1" : ""),
         ]
         c.queryItems = query.filter { !$0.1.isEmpty }.map { URLQueryItem(name: $0.0, value: $0.1) }
         c.fragment = p.name
@@ -162,7 +172,17 @@ enum Import {
             let security = stream["security"] as? String ?? "none"
             let reality = dict(stream, "realitySettings"), tls = dict(stream, "tlsSettings")
             let s = security == "reality" ? reality : tls
-            guard network == "raw", let address = server["address"] as? String, let port = int(server["port"]),
+            let alpn = reality["alpn"] as? String ?? ""
+            let flow = user["flow"] as? String ?? ""
+            let mux = o["mux"] as? [String: Any] ?? [:]
+            guard (network == "raw" || (network == "quicreality" && security == "reality"
+                    && (reality["alpn"] == nil || reality["alpn"] is String)
+                    && (user["flow"] == nil || user["flow"] is String)
+                    && ["xhttpSettings", "splithttpSettings", "quicParams", "finalmask"].allSatisfy({ stream[$0] == nil })
+                    && (o["mux"] == nil || o["mux"] is [String: Any])
+                    && (mux.isEmpty || (mux.count == 1 && mux["enabled"] as? Bool == false))
+                    && (alpn.isEmpty || alpn == "xray-quic-v1") && flow.isEmpty)),
+                  let address = server["address"] as? String, let port = int(server["port"]),
                   let id = user["id"] as? String else { return nil }
             return Profile(name: name ?? address, address: address, port: port, uuid: id,
                            flow: user["flow"] as? String ?? "",

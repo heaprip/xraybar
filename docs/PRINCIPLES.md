@@ -55,3 +55,5 @@ kitchen sinks or look and behave nothing like a Mac app.
    matches that behaviour and format, implemented from scratch. v2rayN is GPL-3.0 and
    XrayBar is MIT: its code is read to understand behaviour, never translated (D9).
 6. **Decisions are written down** in `docs/DECISIONS.md` when they are made.
+
+Experimental direct QUIC REALITY uses an explicitly selected, hash-pinned patched Xray; ordinary upstream downloads remain the default.
