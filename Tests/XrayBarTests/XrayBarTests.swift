@@ -66,6 +66,18 @@ import Testing
             process.arguments = ["run", "-test", "-config", file.path]
             try process.run(); process.waitUntilExit()
             #expect(process.terminationStatus == 0)
+            if let profileFile = ProcessInfo.processInfo.environment["XRAY_QUIC_TEST_PROFILE"] {
+                let privateProfile = try Import.profile(fromLink: String(contentsOfFile: profileFile, encoding: .utf8))
+                #expect(privateProfile.network == "quicreality")
+                try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+                let privateConfig = XrayConfig.validationCopy(XrayConfig.make(profile: privateProfile, routing: RoutingSet(name: "Test", rules: []), settings: Settings()))
+                try XrayConfig.data(privateConfig).write(to: file)
+                let privateProcess = Process()
+                privateProcess.executableURL = URL(fileURLWithPath: path)
+                privateProcess.arguments = ["run", "-test", "-config", file.path]
+                try privateProcess.run(); privateProcess.waitUntilExit()
+                #expect(privateProcess.terminationStatus == 0)
+            }
         }
     }
 

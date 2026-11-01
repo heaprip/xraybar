@@ -23,8 +23,8 @@ enum Assets {
     /// The tag of the copy of v2rayN's xray (Settings.v2rayNXray) in the store.
     static let v2rayNTag = "v2rayN"
     // Experimental Xray b7a8eb90, macOS arm64. This hash identifies this particular build.
-    static let directQUICTag = "direct-quic-b7a8eb90"
-    static let directQUICSHA256: String? = "380eb09dab2848f834aeec9db07cdd2c27e7f107a66f76a31dbdcc0df5e244e1"
+    static let directQUICTag = "direct-quic-repro-b7a8eb90"
+    static let directQUICSHA256: String? = "eebd6086d19b088d4d4e5dbbbf613ab9b38d9352148bf51029081b54ecca002c"
 
     static func matchesDirectQUIC(_ file: URL, expected: String? = directQUICSHA256) -> Bool {
         guard let expected else { return false }
