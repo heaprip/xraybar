@@ -166,13 +166,12 @@
 "A subscription address must start with https://" = "Адрес подписки должен начинаться с https://";
 
 /* Direct QUIC REALITY */
-"QUIC REALITY requires REALITY, ALPN xray-quic-v1 and no VLESS flow" = "Для QUIC REALITY нужны REALITY, ALPN xray-quic-v1 и пустой VLESS flow";
+"QUIC REALITY requires REALITY, supported ALPN and no VLESS flow" = "Для QUIC REALITY нужны REALITY, поддерживаемый ALPN и пустой VLESS flow";
 "This server transport is not supported." = "Транспорт этого сервера не поддерживается.";
 "Direct QUIC requires REALITY and no VLESS flow." = "Для прямого QUIC нужны REALITY и пустой VLESS flow.";
 "Direct QUIC server addresses must be IPv4 or a hostname so the server can bypass the tunnel." = "Для обхода туннеля сервер прямого QUIC должен быть указан адресом IPv4 или именем.";
-"Direct QUIC REALITY requires the verified experimental Xray. Install and select it in Xray Version." = "Для прямого QUIC REALITY нужен проверенный экспериментальный Xray. Установите и выберите его в меню версии Xray.";
+"Direct QUIC REALITY requires a verified Xray build supporting the selected ALPN. Install and select it in Xray Version." = "Для QUIC REALITY нужна проверенная сборка Xray с выбранным ALPN. Установите и выберите её в меню версии Xray.";
 "Could not install Xray" = "Не удалось установить Xray";
-"The verified direct QUIC Xray build is not available yet." = "Проверенная сборка Xray с прямым QUIC пока недоступна.";
 "Select the verified experimental direct QUIC REALITY Xray binary." = "Выберите проверенный экспериментальный файл Xray с прямым QUIC REALITY.";
 "The selected binary does not match the expected experimental Xray SHA-256." = "SHA-256 выбранного файла не совпадает с ожидаемой суммой экспериментального Xray.";
 "Experimental Xray installed" = "Экспериментальный Xray установлен";

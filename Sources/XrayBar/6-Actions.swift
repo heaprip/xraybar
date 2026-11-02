@@ -288,9 +288,6 @@ final class AppModel {
     }
 
     func installDirectQUICXray() {
-        guard let expected = Assets.directQUICSHA256 else {
-            return alert("Could not install Xray", "The verified direct QUIC Xray build is not available yet.")
-        }
         let panel = NSOpenPanel()
         panel.message = L("Select the verified experimental direct QUIC REALITY Xray binary.")
         panel.canChooseDirectories = false
@@ -299,10 +296,10 @@ final class AppModel {
         guard panel.runModal() == .OK, let binary = panel.url else { return }
         Task {
             do {
-                guard try Assets.sha256(binary) == expected else {
+                guard let target = Assets.directQUICInstallTarget(sha256: try Assets.sha256(binary)) else {
                     return alert("Could not install Xray", "The selected binary does not match the expected experimental Xray SHA-256.")
                 }
-                guard try await installXray(Assets.directQUICTag, from: binary, expectedHash: expected) else { return }
+                guard try await installXray(target.tag, from: binary, expectedHash: target.hash) else { return }
                 alert("Experimental Xray installed", "It is selected for the next Connect. The previous version remains available in Xray Version.")
             } catch { alert("Could not install Xray", error.localizedDescription) }
         }

@@ -14,10 +14,10 @@ import Testing
         let stream = try #require(outbound["streamSettings"] as? [String: Any])
         #expect(stream["network"] as? String == "quicreality")
         #expect(stream["xhttpSettings"] == nil && stream["splithttpSettings"] == nil)
-        #expect((stream["realitySettings"] as? [String: Any])?["alpn"] == nil)
+        #expect((stream["realitySettings"] as? [String: Any])?["alpn"] as? String == "xray-quic-v1")
         var fromJSON = try #require(Import.profile(fromConfig: ["remarks": "Direct", "outbounds": [outbound]])); fromJSON.id = p.id
         #expect(fromJSON == p)
-        #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=reality&alpn=h3") }
+        #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=reality&alpn=unsupported") }
         #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=reality&flow=xtls-rprx-vision") }
         #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=tls") }
         #expect(throws: ImportError.self) { try Import.profile(fromLink: "vless://u@h:443?type=quicreality&security=reality&path=%2Ffoo") }
@@ -32,7 +32,7 @@ import Testing
         var bad = outbound
         var badStream = stream
         var reality = try #require(stream["realitySettings"] as? [String: Any])
-        reality["alpn"] = "h3"; badStream["realitySettings"] = reality; bad["streamSettings"] = badStream
+        reality["alpn"] = "unsupported"; badStream["realitySettings"] = reality; bad["streamSettings"] = badStream
         #expect(Import.profile(fromConfig: ["outbounds": [bad]]) == nil)
         reality["alpn"] = "xray-quic-v1"; reality["masterKeyLog"] = "/tmp/unsafe"
         badStream["realitySettings"] = reality; bad["streamSettings"] = badStream
@@ -79,6 +79,43 @@ import Testing
                 #expect(privateProcess.terminationStatus == 0)
             }
         }
+    }
+
+    @Test func quicH3RoundTripsAndLegacyDecode() throws {
+        let base = "vless://11111111-2222-3333-4444-555555555555@example.com:443?type=quicreality&security=reality"
+        let h3 = try Import.profile(fromLink: base + "&alpn=h3")
+        #expect(h3.realityAlpn == "h3")
+        var fromLink = try Import.profile(fromLink: Import.link(for: h3)); fromLink.id = h3.id
+        #expect(fromLink == h3)
+        let outbound = XrayConfig.proxyOutbound(h3)
+        let stream = try #require(outbound["streamSettings"] as? [String: Any])
+        #expect((stream["realitySettings"] as? [String: Any])?["alpn"] as? String == "h3")
+        var fromConfig = try #require(Import.profile(fromConfig: ["outbounds": [outbound]])); fromConfig.id = h3.id
+        #expect(fromConfig == h3)
+        let persisted = try JSONEncoder().encode(h3)
+        #expect(try JSONDecoder().decode(Profile.self, from: persisted) == h3)
+        let legacy = try Import.profile(fromLink: base)
+        #expect(legacy.realityAlpn == nil)
+        var legacyLink = try Import.profile(fromLink: Import.link(for: legacy)); legacyLink.id = legacy.id
+        #expect(legacyLink == legacy)
+        var obj = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as? [String: Any])
+        obj.removeValue(forKey: "realityAlpn")
+        let old = try JSONDecoder().decode(Profile.self, from: JSONSerialization.data(withJSONObject: obj))
+        #expect(old == legacy)
+        let oldStream = try #require(XrayConfig.proxyOutbound(old)["streamSettings"] as? [String: Any])
+        #expect((oldStream["realitySettings"] as? [String: Any])?["alpn"] == nil)
+        #expect(Assets.supportsQUICMode(alpn: nil, actual: "old", legacy: "old", h3: "new"))
+        #expect(!Assets.supportsQUICMode(alpn: "h3", actual: "old", legacy: "old", h3: "new"))
+        #expect(Assets.supportsQUICMode(alpn: "h3", actual: "new", legacy: "old", h3: "new"))
+        #expect(!Assets.supportsQUICMode(alpn: "h3", actual: "new", legacy: "old", h3: nil))
+        #expect(!Assets.supportsQUICMode(alpn: "other", actual: "new", legacy: "old", h3: "new"))
+        let legacyHash = try #require(Assets.directQUICSHA256)
+        let legacyTarget = try #require(Assets.directQUICInstallTarget(sha256: legacyHash))
+        #expect(legacyTarget.tag == Assets.directQUICTag)
+        let h3Hash = try #require(Assets.directQUICH3SHA256)
+        let h3Target = try #require(Assets.directQUICInstallTarget(sha256: h3Hash))
+        #expect(h3Target.tag == Assets.directQUICH3Tag)
+        #expect(Assets.directQUICInstallTarget(sha256: String(repeating: "0", count: 64)) == nil)
     }
 
     @Test func vlessRealityLink() throws {

@@ -20,6 +20,7 @@ struct Profile: Codable, Equatable, Identifiable, Sendable {
     var publicKey = ""           // reality
     var shortId = ""             // reality
     var spiderX = ""             // reality
+    var realityAlpn: String?     // QUIC REALITY: nil/legacy, or h3
     /// nil: VLESS. "hysteria2": `uuid` is the password, `sni` the TLS name (empty: the address).
     var kind: String?
     var obfsPassword: String?    // hysteria2 salamander

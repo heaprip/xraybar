@@ -33,9 +33,9 @@ enum Import {
         let network = q["type"].map { $0 == "tcp" ? "raw" : $0 } ?? "raw"
         guard network == "raw" || network == "quicreality" else { throw ImportError.unsupported("transport \(network)") }
         if network == "quicreality" {
-            guard q["security"] == "reality", (q["alpn"] ?? "").isEmpty || q["alpn"] == "xray-quic-v1",
+            guard q["security"] == "reality", ["", "xray-quic-v1", "h3"].contains(q["alpn"] ?? ""),
                   (q["flow"] ?? "").isEmpty else {
-                throw ImportError.unsupported(L("QUIC REALITY requires REALITY, ALPN xray-quic-v1 and no VLESS flow"))
+                throw ImportError.unsupported(L("QUIC REALITY requires REALITY, supported ALPN and no VLESS flow"))
             }
             guard ["host", "path", "mode", "extra"].allSatisfy({ q[$0] == nil }) else {
                 throw ImportError.unsupported(L("HTTP transport settings are not supported for direct QUIC"))
@@ -55,7 +55,7 @@ enum Import {
             fingerprint: q["fp"].flatMap { $0.isEmpty ? nil : $0 } ?? "chrome",
             publicKey: q["pbk"] ?? "",
             shortId: q["sid"] ?? "",
-            spiderX: q["spx"] ?? "")
+            spiderX: q["spx"] ?? "", realityAlpn: network == "quicreality" ? q["alpn"].flatMap { $0.isEmpty ? nil : $0 } : nil)
     }
 
     /// `hysteria2://password@host:port/?sni=…&obfs=salamander&obfs-password=…&pinSHA256=…#name`
@@ -112,7 +112,7 @@ enum Import {
             ("type", p.network == "raw" ? "tcp" : p.network), ("encryption", p.encryption),
             ("security", p.security), ("sni", p.sni), ("fp", p.fingerprint), ("pbk", p.publicKey),
             ("sid", p.shortId), ("spx", p.spiderX), ("flow", p.flow),
-            ("alpn", p.network == "quicreality" ? "xray-quic-v1" : ""),
+            ("alpn", p.network == "quicreality" ? (p.realityAlpn ?? "") : ""),
         ]
         c.queryItems = query.filter { !$0.1.isEmpty }.map { URLQueryItem(name: $0.0, value: $0.1) }
         c.fragment = p.name
@@ -181,7 +181,7 @@ enum Import {
                     && ["xhttpSettings", "splithttpSettings", "quicParams", "finalmask"].allSatisfy({ stream[$0] == nil })
                     && (o["mux"] == nil || o["mux"] is [String: Any])
                     && (mux.isEmpty || (mux.count == 1 && mux["enabled"] as? Bool == false))
-                    && (alpn.isEmpty || alpn == "xray-quic-v1") && flow.isEmpty)),
+                    && (["", "xray-quic-v1", "h3"].contains(alpn)) && flow.isEmpty)),
                   let address = server["address"] as? String, let port = int(server["port"]),
                   let id = user["id"] as? String else { return nil }
             return Profile(name: name ?? address, address: address, port: port, uuid: id,
@@ -189,7 +189,8 @@ enum Import {
                            encryption: user["encryption"] as? String ?? "none", network: network, security: security,
                            sni: s["serverName"] as? String ?? "", fingerprint: s["fingerprint"] as? String ?? "chrome",
                            publicKey: reality["password"] as? String ?? reality["publicKey"] as? String ?? "",
-                           shortId: reality["shortId"] as? String ?? "", spiderX: reality["spiderX"] as? String ?? "")
+                           shortId: reality["shortId"] as? String ?? "", spiderX: reality["spiderX"] as? String ?? "",
+                           realityAlpn: network == "quicreality" && !alpn.isEmpty ? alpn : nil)
         default:
             return nil
         }

@@ -72,6 +72,7 @@ enum XrayConfig {
             stream["realitySettings"] = nonEmpty([
                 "serverName": p.sni, "fingerprint": p.fingerprint,
                 "password": p.publicKey, "shortId": p.shortId, "spiderX": p.spiderX,
+                "alpn": p.network == "quicreality" ? (p.realityAlpn ?? "") : "",
             ])
         case "tls":
             stream["security"] = "tls"

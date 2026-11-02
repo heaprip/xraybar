@@ -26,6 +26,29 @@ enum Assets {
     static let directQUICTag = "direct-quic-repro-b7a8eb90"
     static let directQUICSHA256: String? = "eebd6086d19b088d4d4e5dbbbf613ab9b38d9352148bf51029081b54ecca002c"
 
+    // Reproducible Darwin arm64 build of Xray d39241a662de9400b58e33abc85d6e30765550f9.
+    static let directQUICH3Tag = "direct-quic-h3-d39241a"
+    static let directQUICH3SHA256: String? = "6dea1ca35335cef454913bf7a33937bb1a8a10d54724c76b1751ef46fe465025"
+
+    static func directQUICInstallTarget(sha256: String) -> (tag: String, hash: String)? {
+        if let hash = directQUICSHA256, sha256 == hash { return (directQUICTag, hash) }
+        if let hash = directQUICH3SHA256, sha256 == hash { return (directQUICH3Tag, hash) }
+        return nil
+    }
+
+    static func supportsQUICMode(alpn: String?, actual: String, legacy: String?, h3: String?) -> Bool {
+        switch alpn ?? "" {
+        case "", "xray-quic-v1": return actual == legacy || actual == h3
+        case "h3": return actual == h3
+        default: return false
+        }
+    }
+
+    static func matchesQUICMode(_ file: URL, alpn: String?) -> Bool {
+        guard let actual = try? sha256(file) else { return false }
+        return supportsQUICMode(alpn: alpn, actual: actual, legacy: directQUICSHA256, h3: directQUICH3SHA256)
+    }
+
     static func matchesDirectQUIC(_ file: URL, expected: String? = directQUICSHA256) -> Bool {
         guard let expected else { return false }
         return (try? sha256(file)) == expected

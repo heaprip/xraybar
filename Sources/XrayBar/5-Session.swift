@@ -76,8 +76,8 @@ final class Session {
         guard let xray = library.settings.xrayBinary else {
             return fail(String(format: L("No Xray installed yet. Choose Xray › Download %@, or Copy Xray from v2rayN."), Assets.testedXray))
         }
-        if profile.network == "quicreality" && !Assets.matchesDirectQUIC(URL(fileURLWithPath: xray)) {
-            return fail("Direct QUIC REALITY requires the verified experimental Xray. Install and select it in Xray Version.")
+        if profile.network == "quicreality" && !Assets.matchesQUICMode(URL(fileURLWithPath: xray), alpn: profile.realityAlpn) {
+            return fail("Direct QUIC REALITY requires a verified Xray build supporting the selected ALPN. Install and select it in Xray Version.")
         }
         if let other = Self.otherTunnel() {
             return fail(String(format: L("Another VPN or TUN (%@) already routes all traffic, for example v2rayN in TUN mode. "
